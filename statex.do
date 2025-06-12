@@ -14,21 +14,7 @@ prog statex
 	}
 	else {
 		di as error `"Unknown subcommand: `subcmd'"'
-		di "available subcommands: sum, reg"
+		di "available subcommands: sum, est"
 		exit 198
 	}
 end
-
-statex reg, anoption(string)
-statex reg reg1 reg2 reg3, anoption anotopt(st)
-
-cap prog drop tmp
-
-prog tmp 
-	syntax anything(everything), [*]
-	
-	di "`anythin', `options'"
-end
-
-
-tmp, help strin(abcd)
