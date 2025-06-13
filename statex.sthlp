@@ -81,7 +81,7 @@ Other
 {marker author}{...}
 {title:Author}
 
-{pstd}Adam Reiremo{break}
+{pstd}{browse "https://adamreir.com/":Adam Reiremo}{break}
 Norwegian School of Economics{break}
 Email: {browse "mailto:adamreir@gmail.com":adamreir@gmail.com}
 {p_end}
