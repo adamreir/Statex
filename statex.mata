@@ -35,14 +35,21 @@ mata
 class __TableInfo {
 	string scalar name
 	string scalar filename
+	string scalar stars
+	string scalar paren
+	real scalar status
+	real scalar panel
 	real scalar ncols
 	void init()
 }
 
-void __TableInfo::init(string scalar _name, string scalar _filename, real scalar _ncols) {
+void __TableInfo::init(string scalar _name, string scalar _filename, real scalar _ncols, string scalar _stars, string scalar _paren) {
 	name = _name
 	filename = _filename
 	ncols = _ncols
+	stars= _stars
+	paren = _paren
+	status = 1
 }
 
 end
@@ -57,6 +64,7 @@ cap mata: mata drop __Statex()
 mata: 
 class __Statex {
 	string scalar current //private
+	real scalar auto_counter
 	//string vector names
 	pointer vector tables //private
 	
@@ -71,19 +79,20 @@ class __Statex {
 
 void __Statex::init() {	 // constructor
 	current = ""
-	//names = J(0,1,"")
+	auto_counter = 0
 	tables = J(0,1,NULL)
 }
 
-void __Statex::add_table(string scalar name, string scalar filename, real scalar ncols) { // Add Tables
+void __Statex::add_table(string scalar name, string scalar filename, real scalar ncols, string scalar stars, string scalar paren) { // Add Tables
 	class __TableInfo scalar T
 	confirm_noexist(name)
 	
 	T = __TableInfo()
-	T.init(name, filename, ncols)
-	//names  = names \ T.name
+	T.init(name, filename, ncols, stars, paren)
 	tables = tables \ &T
 	current = name
+	
+	//auto_counter = auto_counter + 1
 }
 
 // Look for names
@@ -139,8 +148,8 @@ end
 mata: __statex = __Statex()
 mata: __statex.init()
 cap prog drop tmp
-mata: __statex.add_table("name1", "filen1", 5)
-mata: __statex.add_table("name2", "filen2", 3)
+mata: __statex.add_table("name1", "filen1", 5, ".05 .01 .001", "se")
+mata: __statex.add_table("name2", "filen2", 3, ".05 .01 .001", "se")
 mata: __statex.get_current()
 mata: __statex.set_current("name1")
 

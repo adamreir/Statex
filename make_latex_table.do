@@ -3,9 +3,13 @@
 *********************************** New Table **********************************
 ********************************************************************************
 
-cap prog drop table_new
-prog table_new
-	syntax, name(namelist max=1) coltypes(string) n_cols(integer) file(string) [stars(numlist descending min=3 max=3) t se p replace]
+cap prog drop statex_new
+prog statex_new
+	syntax, ///
+		name(namelist max=1) ///
+		coltypes(string) n_cols(integer) ///
+		file(string) ///
+		[stars(numlist descending min=3 max=3) t se p ci none replace]
 	
 	* Parse
 	*******
@@ -16,9 +20,9 @@ prog table_new
 		exit 198
 	}
 	
-	cap assert inlist("`t'`se'`p'", "", "t", "se", "p")
+	cap assert inlist("`t'`se'`p'`ci'`none'", "", "t", "se", "p", "ci", "none")
 	if _rc {
-		di as error "Can only specify one of 't', 'se', and 'p'. Received multiple" 
+		di as error "Can at most one of the following: 't', 'se', 'p', 'ci', 'none'. Received multiple." 
 		exit 198
 	}
 	
