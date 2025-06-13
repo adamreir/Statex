@@ -1,3 +1,6 @@
+
+adopath + "C:\Users\adamr\Documents\GitHub\Statex"
+
 cap prog drop statex
 prog statex
 	version 16
