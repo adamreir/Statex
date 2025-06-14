@@ -3,11 +3,12 @@
 *********************************** New Table **********************************
 ********************************************************************************
 
+
 cap prog drop statex_new
 prog statex_new
 	syntax, ///
-		name(namelist max=1) ///
-		coltypes(string) n_cols(integer) ///
+		[name(namelist max=1)] ///
+		[coltypes(string)] n_cols(integer) ///
 		file(string) ///
 		[stars(numlist descending min=3 max=3) t se p ci none replace]
 	
@@ -26,69 +27,43 @@ prog statex_new
 		exit 198
 	}
 	
+	// Default options: 
+	if "`stars'"=="" loc stars = ".05 .01 .001"	
+	if "`t'`se'`p'"=="" 	loc se = "se"
+	if "`coltypes'"=="" {
+		loc coltypes = "l"
+		forv n = 1/`=`n_cols'-1' {
+			loc coltypes = "`coltypes'c"
+		}
+	}
+	
 	* Close any open file and delete any existing global associated with the name. 
 	******************************************************************************
 	
-	cap file close `name'__tab
-	foreach gname in tab_open tab_n_cols 1stars 2stars 3stars paren {
-		macro drop global `name'__`gname'
-	}
 	
 	* Save Meta Information
 	***********************
-	
-	global `name'__tab_open = 1
-	global `name'__tab_n_cols = `n_cols'
-	
-	global `name'__panel_counter = 1
-	
-	if "`stars'"=="" loc stars = ".05 .01 .001"
-	gettoken 1stars stars : stars
-	gettoken 2stars 3stars : stars
-	global `name'__1stars = `1stars'
-	global `name'__2stars = `2stars'
-	global `name'__3stars = `3stars'
-	
-	// t se p
-	if "`t'`se'`p'"=="" 	global `name'__paren = "se"
-	else 			global `name'__paren = "`t'`se'`p'"
-	
-	
-	* Open File and Write Table Header
-	***********************************
-	
-	file open `name'__tab using "`file'", write text `replace'
-	
-	file write `name'__tab `"{"' _n
-	file write `name'__tab "\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}" _n
-	file write `name'__tab "\begin{tabular}{`coltypes'} \hline\midrule" _n
+	if "`name'"=="" mata: statex.get_auto_newname() // Get auto name if name is unspecified. 
+	mata: pT = statex.add_table("`name'", "`file'", `n_cols', "`stars'", "`t'`se'`p'", 10)
+	mata: pT->add_line("\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}")
+	mata: pT->add_line("\begin{tabular}{`coltypes'} \hline\midrule")
 end
 
-cap prog drop table_add_panel_header
-prog table_add_panel_header
-	syntax, name(namelist max=1) text(string) [panel_name(string) nobold NOTEXTprocessing]
+cap prog drop statex_list
+prog statex_list
+	syntax, [name(string)]
 	
-	* Parse
-	*******
-	// Table is open
-	cap assert ${`name'__tab_open}==1
-	if _rc {
-		di as error `"Table `name' not open"'
-		exit 198
-	}
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	mata: pT->li()
+end
+
+cap prog drop statex_panel
+prog statex_panel
+	syntax, [name(namelist max=1)] text(string) [panel_name(string) nobold NOTEXTprocessing]
 	
-	// Check user have not exhausted A-Z
-	cap assert ${`name'__panel_counter}<=26
-	if _rc {
-		di as error `"Exhausted all panel names A-Z. Use option 'panel_name(string)' if you want to manually set panel name."'
-		exit 198
-	}
 	* Write Panel Header
 	********************
-	if `"`panel_name'"'=="" {
-		loc panel_name = char(64 + ${`name'__panel_counter})		
-		global `name'__panel_counter = ${`name'__panel_counter} + 1
-	}
 	
 	if "`nobold'"=="" {
 		loc bold_start = `"\textbf{"'
@@ -96,12 +71,15 @@ prog table_add_panel_header
 	}
 	
 	// Prepare text for LaTeX
-	if "`notextprocessing'"=="" {
-		loc text = subinstr(`"`text'"', `"#"', `"\#"', .)
-		loc text = subinstr(`"`text'"', `"_"', `"\_"', .)
-		loc text = subinstr(`"`text'"', ">", `"\textgreater"', .)
-		loc text = subinstr(`"`text'"', "<", `"\textless"', .)
-	}
+	
+	
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	mata: pT->panel()
+	mata: st_local("ncols", strofreal(pT->ncols))
+	
+	di "`panel'"
+	di "`ncols'"
 	file write `name'__tab `"\multicolumn{${`name'__tab_n_cols}}{l}{`bold_start'Panel `panel_name': `text'`bold_end'} \\"' _n
 end
 
@@ -692,6 +670,15 @@ prog table_close
 		di as error `"Table `name' not open"'
 		exit 198
 	}
+	
+	/*
+	if "`notextprocessing'"=="" {
+		loc text = subinstr(`"`text'"', `"#"', `"\#"', .)
+		loc text = subinstr(`"`text'"', `"_"', `"\_"', .)
+		loc text = subinstr(`"`text'"', ">", `"\textgreater"', .)
+		loc text = subinstr(`"`text'"', "<", `"\textless"', .)
+	}
+	*/
 	
 	file write `name'__tab `"\hline\midrule"' _n
 	if "`paren'`stars'"!="" __table_add_footer, name(`name') `paren' `stars' `robust'

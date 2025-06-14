@@ -1,5 +1,5 @@
 
-adopath + "C:\Users\adamr\Documents\GitHub\Statex"
+adopath + "C:/Users/`=c(username)'/Documents/GitHub/Statex"
 
 cap prog drop statex
 prog statex
