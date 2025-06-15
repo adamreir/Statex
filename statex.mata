@@ -9,27 +9,28 @@ mata
 class Table {
 	string vector content // Private?
 	string scalar name
-	string scalar filename
 	string scalar stars
 	string scalar paren
 	real scalar panel_counter
 	real scalar ncols
 	real scalar cell_width
+	real scalar is_closed
 	void init()
 	void li()
 	void add_line() 
 	void panel()
 }
 
-void Table::init(string scalar _name, string scalar _filename, real scalar _ncols, string scalar _stars, string scalar _paren, real scalar _cell_width) {
+void Table::init(string scalar _name, real scalar _ncols, string scalar _stars, string scalar _paren, real scalar _cell_width) {
 	content = J(0, 1, "")
 	name = _name
-	filename = _filename
+	//filename = _filename
 	ncols = _ncols
 	stars= _stars
 	paren = _paren
 	cell_width = _cell_width
 	panel_counter = 65
+	is_closed = 0
 }
 
 void Table::li() {
@@ -40,6 +41,7 @@ void Table::li() {
 }
 
 void Table::add_line(string scalar line) {
+	printf(line)
 	content = content \ line
 }
 
@@ -50,6 +52,7 @@ void Table::panel() {
 	current = panel_counter
 	panel = ""
 	panel_counter++
+	panel_counter
 	
 	while (current>90) {
 		panel = panel + "A"
@@ -72,7 +75,7 @@ class Statex {
 	// Data
 	string scalar current //private
 	real scalar auto_counter //private
-	pointer vector tables //private
+	pointer(class Table) vector tables //private
 	
 	void init() //public
 	
@@ -97,12 +100,12 @@ void Statex::init() {
 	tables = J(0,1,NULL)
 }
 
-pointer scalar Statex::add_table(string scalar name, string scalar filename, real scalar ncols, string scalar stars, string scalar paren, cell_width) { // Add Tables
+pointer scalar Statex::add_table(string scalar name, real scalar ncols, string scalar stars, string scalar paren, cell_width) { // Add Tables
 	class Table scalar T
 	confirm_noexist(name)
 	
 	T = Table()
-	T.init(name, filename, ncols, stars, paren, cell_width)
+	T.init(name, ncols, stars, paren, cell_width)
 	tables = tables \ &T
 	current = name
 	
@@ -134,12 +137,12 @@ void Statex::confirm_name_exists(string scalar _name) {
 }
 
 pointer scalar Statex::get_table(string scalar name) {
+	pointer(class Table) scalar pT
 	real scalar i
-	class Table scalar T
 	for (i=1; i<=rows(tables); i++) {
-		T = (*tables[i])
-		if (name == T.name) {
-			return(&T)
+		pT = tables[i]
+		if (name == pT->name) {
+			return(pT)
 		}
 	}
 	_error(111, "table '" + name + "' not found") // not found
@@ -166,8 +169,8 @@ void Statex::dir() { // Dir
 	class Table scalar T
 	for (i=1; i<=rows(tables); i++) {
 		T = (*tables[i])
-		if (T.name==current) 	printf("*" + T.name + " (%f columns); @" + T.filename +"\n", T.ncols)
-		else				printf(T.name + " (%f columns); @" + T.filename +"\n", T.ncols)
+		if (T.name==current) 	printf("*" + T.name + " (%f columns);" + "\n", T.ncols)
+		else				printf(T.name + " (%f columns);" +"\n", T.ncols)
 	}
 }
 

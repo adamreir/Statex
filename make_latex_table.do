@@ -9,7 +9,6 @@ prog statex_new
 	syntax, ///
 		[name(namelist max=1)] ///
 		[coltypes(string)] n_cols(integer) ///
-		file(string) ///
 		[stars(numlist descending min=3 max=3) t se p ci none replace]
 	
 	* Parse
@@ -37,14 +36,10 @@ prog statex_new
 		}
 	}
 	
-	* Close any open file and delete any existing global associated with the name. 
-	******************************************************************************
-	
-	
 	* Save Meta Information
 	***********************
 	if "`name'"=="" mata: statex.get_auto_newname() // Get auto name if name is unspecified. 
-	mata: pT = statex.add_table("`name'", "`file'", `n_cols', "`stars'", "`t'`se'`p'", 10)
+	mata: pT = statex.add_table("`name'", `n_cols', "`stars'", "`t'`se'`p'", 10)
 	mata: pT->add_line("\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}")
 	mata: pT->add_line("\begin{tabular}{`coltypes'} \hline\midrule")
 end
@@ -58,60 +53,47 @@ prog statex_list
 	mata: pT->li()
 end
 
-cap prog drop statex_panel
-prog statex_panel
-	syntax, [name(namelist max=1)] text(string) [panel_name(string) nobold NOTEXTprocessing]
-	
-	* Write Panel Header
-	********************
-	
-	if "`nobold'"=="" {
-		loc bold_start = `"\textbf{"'
-		loc bold_end   = `"}"'
-	}
-	
-	// Prepare text for LaTeX
-	
-	
-	if "`name'"=="" mata: _ = statex.get_current()
-	mata: pT = statex.get_table("`name'")
-	mata: pT->panel()
-	mata: st_local("ncols", strofreal(pT->ncols))
-	
-	di "`panel'"
-	di "`ncols'"
-	file write `name'__tab `"\multicolumn{${`name'__tab_n_cols}}{l}{`bold_start'Panel `panel_name': `text'`bold_end'} \\"' _n
+cap prog drop statex_dir
+prog statex_dir
+	mata: statex.dir()
 end
 
 cap prog drop table_add_row
 prog table_add_row
-	syntax, name(namelist max=1) row(string asis) [multicolumn(numlist integer min=1) blank align(string) midrule(string asis) bold]
-
+	syntax, ///
+		[name(namelist max=1)] ///
+		row(string asis) [multicolumn(numlist integer min=1) blank align(string) underline(string asis) bold]
+	
+	* Name
+	******
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	
 	* Parse
 	*******
-	
 	loc blank = "`blank'"!=""
-	
-	// Table is open
-	cap assert ${`name'__tab_open}==1
-	if _rc {
-		di as error `"Table `name' not open"'
-		exit 198
-	}
+	loc has_multicolumn = `"`multicolumn'"'!=""
 	
 	// If not multicolumn: n in row same as columns in table
-	loc has_multicolumn = `"`multicolumn'"'!=""
 	if !`has_multicolumn' {
 		loc has_multicolumn = 0
-		if `blank' loc p1 = "+1"
-		loc n_elems : list sizeof row
-		cap assert `n_elems' `p1' == ${`name'__tab_n_cols} 
+		
+		// Count implied columns from syntax
+		loc ncols : list sizeof row
+		if `blank' loc ncols = `ncols' + 1
+		
+		// Get number of columns of table: 
+		mata: st_local("ncols_table", strofreal(pT->ncols))
+		
+		// Check that they are the same: 
+		cap assert `ncols' == `ncols_table' 
 		if _rc {
 			if `blank' loc blank_message = " including one blank column"
-			di as error "Wrong number of elements in row. Received `=`n_elems'`p1'' columns`blank_message', expected ${`name'__tab_n_cols}"
+			di as error "Wrong number of elements in row. Received `ncols' columns`blank_message', expected `ncols_table'"
 			exit 198
 		}
 		
+		// Check: alignment not specified
 		cap assert `"`alignment'"'=="" 
 		if _rc {
 			di as error "Cannot specify alignment without multicolumn"
@@ -121,7 +103,7 @@ prog table_add_row
 	
 	// If multicolumn: n in row same as multicol, and sum(multicol)==n columns
 	if `has_multicolumn' { 
-		// Check same number of elements in row and multicolumn
+		// Check: same number of elements in row and multicolumn
 		loc n_elems : list sizeof row
 		loc n_multicol : list sizeof multicolumn
 		cap assert `n_elems' == `n_multicol'
@@ -130,12 +112,15 @@ prog table_add_row
 			exit 198
 		}
 		
-		// Check same number of columns in multicolumn as in table
+		// Check: same number of impled columns as in table
 		if `blank' loc p1 = "+1"
 		loc n_cols = 0 
 		foreach multicol of local multicolumn {
 			loc n_cols = `n_cols' + `multicol'
 		}
+			// Get number of columns of table: 
+		mata: st_local("ncols", strofreal(pT->ncols))
+		
 		cap assert `n_cols' `p1' == ${`name'__tab_n_cols}
 		if _rc {
 			if `blank' loc blank_message = " including one blank column"
@@ -216,6 +201,34 @@ prog table_add_row
 	file write `name'__tab `""' _n
 	
 end
+
+
+cap prog drop statex_panel
+prog statex_panel
+	syntax, ///
+		[name(namelist max=1)] ///
+		text(string) ///
+		[panel_name(string) nobold]
+	
+	* Write Panel Header
+	********************
+	
+	if "`nobold'"=="" {
+		loc bold_start = `"\\textbf{"'
+		loc bold_end   = `"}"'
+	}
+	
+	// Prepare text for LaTeX
+	
+	
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	mata: pT->panel()
+	mata: st_local("ncols", strofreal(pT->ncols))
+	
+	mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`bold_start'Panel `panel': `text'`bold_end'} \\\\"')
+end
+
 
 cap prog drop table_add_midrule
 prog table_add_midrule

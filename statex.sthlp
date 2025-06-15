@@ -24,9 +24,9 @@ Initiate, manage, and organize statex tables
 
 {p2colset 9 39 41 2}{...}
 {p2col :{helpb statex_manage:statex new}}Initialize a new table{p_end}
+{p2col :{helpb statex_manage:statex dir}}List all tables in memory{p_end}
 {p2col :{helpb statex_manage:statex change}}Change the current table{p_end}
 {p2col :{helpb statex_manage:statex drop}}Drop table{p_end}
-{p2col :{helpb statex_manage:statex save}}Finalize and save table{p_end}
 {p2colreset}{...}
 
 {pstd}
@@ -43,6 +43,14 @@ Add estimates or summary statistics
 {p2colset 9 39 41 2}{...}
 {p2col :{helpb statex_stats:statex est}}Adds estimation results{p_end}
 {p2col :{helpb statex_stats:statex sum}}Adds summary statistics{p_end}
+{p2colreset}{...}
+
+{pstd}
+Finish and save
+
+{p2colset 9 39 41 2}{...}
+{p2col :{helpb statex_manage:statex footer}}Finalize table{p_end}
+{p2col :{helpb statex_manage:statex save}}Save the table to disk{p_end}
 {p2colreset}{...}
 
 {pstd}
