@@ -58,12 +58,15 @@ prog statex_dir
 	mata: statex.dir()
 end
 
-cap prog drop table_add_row
-prog table_add_row
+cap prog drop statex_row
+prog statex_row
 	syntax, ///
 		[name(namelist max=1)] ///
 		row(string asis) [multicolumn(numlist integer min=1) blank align(string) underline(string asis) bold]
 	
+	di `"`row'"'
+	//loc row `""a" "b" "c""'
+	//di `"`row'"'
 	* Name
 	******
 	if "`name'"=="" mata: _ = statex.get_current()
@@ -86,7 +89,7 @@ prog table_add_row
 		mata: st_local("ncols_table", strofreal(pT->ncols))
 		
 		// Check that they are the same: 
-		cap assert `ncols' == `ncols_table' 
+		cap assert `ncols' == `ncols_table' //test: statex_new, ncols(3); statex_row, row("a" "b" "c" "d")
 		if _rc {
 			if `blank' loc blank_message = " including one blank column"
 			di as error "Wrong number of elements in row. Received `ncols' columns`blank_message', expected `ncols_table'"
@@ -94,9 +97,9 @@ prog table_add_row
 		}
 		
 		// Check: alignment not specified
-		cap assert `"`alignment'"'=="" 
+		cap assert `"`align'"'=="" //test: statex_new, ncols(3); statex_row, row("a" "b" "c") align(c c c) 
 		if _rc {
-			di as error "Cannot specify alignment without multicolumn"
+			di as error "Cannot specify 'align' without multicolumn"
 			exit 198
 		}
 	}
@@ -113,18 +116,18 @@ prog table_add_row
 		}
 		
 		// Check: same number of impled columns as in table
-		if `blank' loc p1 = "+1"
+		if `blank' loc p1 = "+1" // Move below the loop and change to if `blank' loc n_cols = `n_cols'+1
 		loc n_cols = 0 
 		foreach multicol of local multicolumn {
 			loc n_cols = `n_cols' + `multicol'
 		}
 			// Get number of columns of table: 
-		mata: st_local("ncols", strofreal(pT->ncols))
+		mata: st_local("n_cols_tab", strofreal(pT->ncols))
 		
-		cap assert `n_cols' `p1' == ${`name'__tab_n_cols}
+		cap assert `n_cols' `p1' == `n_cols_tab'
 		if _rc {
 			if `blank' loc blank_message = " including one blank column"
-			di as error `"Total Number of columns, i.e. sum of multicolumns (`n_cols'`blank_message'), is not the same as the number of columns in Table `name' (${`name'__tab_n_cols})"'
+			di as error `"Total Number of columns, i.e. sum of multicolumns (`n_cols'`blank_message'), is not the same as the number of columns in Table `name' (`n_cols_tab')"'
 			exit 198
 		}
 		
@@ -157,7 +160,6 @@ prog table_add_row
 	
 	* Write row
 	************
-	
 	if !`has_multicolumn' {
 		if `blank' file write `name'__tab " & "
 		
@@ -199,7 +201,6 @@ prog table_add_row
 	}
 	
 	file write `name'__tab `""' _n
-	
 end
 
 

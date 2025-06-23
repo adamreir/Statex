@@ -3,7 +3,10 @@ do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 do "C:/Users/`=c(username)'/Documents/GitHub/statex/make_latex_table.do"
 
 
-statex_new, n_cols(7)
+statex_new, n_cols(2)
+statex_row, row("a" "b") align(c c)
+
+
 statex_panel, text("some text")
 statex_panel, text("some text")
 
