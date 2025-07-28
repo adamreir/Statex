@@ -4,14 +4,21 @@ do "C:/Users/`=c(username)'/Documents/GitHub/statex/make_latex_table.do"
 
 
 statex_new, n_cols(2)
-statex_row, row("a" "b") align(c c)
+statex_row, row("c") blank //align(c c) multicolumn(1 1)
+statex_row, row("*DDDD" "b") align(c c) multicolumn(1 1)
 
 
 statex_panel, text("some text")
 statex_panel, text("some text")
+
+mata: pT = statex.get_table("Table1")
+mata: pT->content
 
 statex_list
 statex_dir
+
+set tracedepth 2
+set trace on
 
 mata: pT = statex.get_table("Table1")
 mata: st_local("ncols", strofreal(pT->ncols))

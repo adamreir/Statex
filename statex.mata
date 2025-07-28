@@ -18,6 +18,7 @@ class Table {
 	void init()
 	void li()
 	void add_line() 
+	void append_to_line()
 	void panel()
 }
 
@@ -43,6 +44,11 @@ void Table::li() {
 void Table::add_line(string scalar line) {
 	printf(line)
 	content = content \ line
+}
+
+void Table::append_to_line(string scalar line) {
+	printf(line)
+	content[rows(content),] = content[rows(content),] + line
 }
 
 void Table::panel() {

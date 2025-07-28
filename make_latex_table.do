@@ -71,6 +71,7 @@ prog statex_row
 	******
 	if "`name'"=="" mata: _ = statex.get_current()
 	mata: pT = statex.get_table("`name'")
+	mata: pT->add_line("")
 	
 	* Parse
 	*******
@@ -161,29 +162,30 @@ prog statex_row
 	* Write row
 	************
 	if !`has_multicolumn' {
-		if `blank' file write `name'__tab " & "
+		if `blank' mata: pT->append_to_line(" & ")
 		
 		loc n = 0
 		foreach elem of local row {
-			if `n'>0 file write `name'__tab `" & `bold_start'`elem'`bold_end'"'
-			else 	 file write `name'__tab `"`bold_start'`elem'`bold_end'"'
+			if `n'>0 mata: pT->append_to_line(`" & `bold_start'`elem'`bold_end'"')
+			else 	 mata: pT->append_to_line(`"`bold_start'`elem'`bold_end'"')
+			
 			loc n = `n'+1
 		}
 	}
 	else {
-		if `blank' file write `name'__tab " & "
+		if `blank' mata: pT->append_to_line(" & ")
 		
 		loc n = 0
 		foreach elem of local row {
 			gettoken n_cols multicolumn : multicolumn
 			if `has_align' 	gettoken a align : align
 			else 			loc a = "c"
-			if `n'>0 file write `name'__tab `" & \multicolumn{`n_cols'}{`a'}{`bold_start'`elem'`bold_end'}"'
-			else 	 file write `name'__tab `"\multicolumn{`n_cols'}{`a'}{`bold_start'`elem'`bold_end'}"'
+			if `n'>0 mata: pT->append_to_line(`" & \multicolumn{`n_cols'}{`a'}{`bold_start'`elem'`bold_end'}"')
+			else 	 mata: pT->append_to_line(`"\multicolumn{`n_cols'}{`a'}{`bold_start'`elem'`bold_end'}"')
 			loc n = `n'+1
 		}
 	}
-	file write `name'__tab `" \\ "' 
+	mata: pT->append_to_line(`" \\ "')
 	
 	loc has_midrule = `"`midrule'"'!=""
 	if `has_midrule' {
@@ -196,11 +198,11 @@ prog statex_row
 				di as error `"midrule must consists of lists of numbers, received `l'-`r'"'
 			}
 			
-			file write `name'__tab `"\cmidrule(lr){`l'-`r'} "'
+			pT->append_to_line(`"\cmidrule(lr){`l'-`r'} "')
 		}
 	}
 	
-	file write `name'__tab `""' _n
+	//file write `name'__tab `""' _n
 end
 
 
@@ -227,23 +229,17 @@ prog statex_panel
 	mata: pT->panel()
 	mata: st_local("ncols", strofreal(pT->ncols))
 	
-	mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`bold_start'Panel `panel': `text'`bold_end'} \\\\"')
+	mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`bold_start'Panel `panel': `text'`bold_end'} \\"')
 end
 
 
 cap prog drop table_add_midrule
 prog table_add_midrule
 	syntax, name(namelist max=1)
-	* Syntax
-	********
-	// Table is open
-	cap assert ${`name'__tab_open}==1
-	if _rc {
-		di as error `"Table `name' not open"'
-		exit 198
-	}
-	
-	file write `name'__tab  `"\midrule"' _n
+
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	mata: pT->add_line("\midrule")
 	
 end
 
@@ -321,7 +317,7 @@ prog __table_est_extract // Take ests stored in namelist, store in (new) frame _
 	loc n_res : list sizeof namelist
 	cap assert `n_res' + 1 == ${`name'__tab_n_cols} // column for varnames
 	if _rc {
-		di as error "Wrong number of estimation results. Received `n_res', expected `=${`name'__tab_n_cols}-1' (${`name'__tab_n_cols}-1 for the varlist)"
+		di as error "Wrong number of estimation results. Received `n_res', expected `=${`name'__tab_n_cols}-1' (${`name'__tab_n_cols} minus one column for the varlist)"
 		exit 198
 	}
 	
@@ -398,24 +394,26 @@ prog __table_est_table
 	syntax, name(string) n_cols(integer) b(string) se(string)
 	// Reads params from frame and writes to table. 
 	
+	mata: pT = statex.get_table("`name'")
+	
 	frame __table_res: loc n_vars = _N
-
+	
 	forv row_i = 1/`n_vars' {
 		frame __table_res: loc var = varlist[`row_i']
-		file write `name'__tab `"`var'"'
+		mata: pT->add_line(`"`var'"')
 		
 		// beta/stars
 		forv col_i = 1/`n_cols' {			
 			frame __table_res: loc __b = b`col_i'[`row_i']
 			loc __b = strofreal(`__b', "`b'")
 			frame __table_res: loc __p = p`col_i'[`row_i']
-			if 	`__p'<${`name'__3stars} loc __stars = `"\sym{***}"'
+			if 		`__p'<${`name'__3stars} loc __stars = `"\sym{***}"'
 			else if `__p'<${`name'__2stars} loc __stars = `"\sym{**}"'
 			else if `__p'<${`name'__1stars} loc __stars = `"\sym{*}"'
 			else loc __stars = ""
 			
-			if `__b'!=.		file write `name'__tab `" & `__b'`__stars'"'
-			else			file write `name'__tab `" & "'
+			if `__b'!=.		mata pT->append_to_line(`" & `__b'`__stars'"')
+			else			mata pT->append_to_line(`" & "'
 		}
 		file write `name'__tab " \\" _n
 		
@@ -434,17 +432,30 @@ prog __table_est_table
 	
 end
 
+cap prog drop tmp 
+prog tmp 
+	syntax namelist
+
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	
+	loc n_res : list sizeof namelist
+	
+	
+	di "`n_cols'"
+end
+
+tmp reg1
+
+
 cap prog drop table_add_est
 prog table_add_est
 	syntax namelist, name(namelist max=1) label b(passthru) se(passthru) [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) shortmidrule]	
 	* Syntax
 	********
 	// Table is open
-	cap assert ${`name'__tab_open}==1
-	if _rc {
-		di as error `"Table `name' not open"'
-		exit 198
-	}
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
 	
 	if "`shortmidrule'"!="" {
 		cap assert "`nostats'"==""
@@ -455,8 +466,25 @@ prog table_add_est
 	}
 	
 	// Check that namelist contains res that exists
+	foreach estname of local namelist {
+		cap estimates dir `estname'
+		if _rc {
+			di as error `"Stored estimate `estname' not found"'
+		}
+	}
 	
 	// Check that namelist has the appropriate length. 
+	loc nres : list sizeof namelist
+	mata: st_local("ncols", strofreal(pT->ncols))
+	
+	cap assert `nres'==`ncols'-1
+	if _rc {
+		di as error "Number of estimation results provided (`nres') not the same as the number expected (`=`ncols'-1)"
+		di as error "Expects one less estimation result than the number of columns in table (the first is reserve variable names)."
+		exit 198
+	}
+	
+	// FLAG: Check that user did not provide both keep and order?
 	
 	* Write table
 	*************
