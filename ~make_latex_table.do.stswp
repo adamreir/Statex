@@ -257,11 +257,7 @@ prog table_from_data
 	* Syntax
 	********
 	// Table is open
-	cap assert ${`name'__tab_open}==1
-	if _rc {
-		di as error `"Table `name' not open"'
-		exit 198
-	}
+	if "`name'"=="" mata: _ = statex.get_current()
 	
 	// Specify either varlist or mat (currently disabled)
 	cap assert ("`varlist'"!="" | "`mat'"!="")
