@@ -257,49 +257,14 @@ prog table_from_data
 	* Syntax
 	********
 	// Table is open
-	cap assert ${`name'__tab_open}==1
-	if _rc {
-		di as error `"Table `name' not open"'
-		exit 198
-	}
+	if "`name'"=="" mata: _ = statex.get_current()
 	
-	// Specify either varlist or mat (currently disabled)
-	cap assert ("`varlist'"!="" | "`mat'"!="")
-	if _rc {
-		di as error "Must specify either varlist or mat"
-	}
-	cap assert !("`varlist'"=="" & "`mat'"=="")
-	if _rc {
-		di as error "Cannot specify both varlist and mat"
-	}
-	
-	// Check varlist 
-	if "`varlist'"!="" {
-		loc n_vars : list sizeof varlist
-		cap assert `n_vars' == ${`name'__tab_n_cols} 
-		if _rc {
-			di as error "Wrong number of variables. Received `n_vars' variables and the table has ${`name'__tab_n_cols} columns."
-			exit 198
-		}
-		cap assert _N<100
-		if _rc {
-			di as error "Cannot create table with more than 100 rows"
-			exit 198
-		}
-	}
-	
-	* Write panel
-	*************
-	forv n=1/`=_N' {
-		loc n_var = 1
-		foreach v of varlist `varlist' {
-			loc val = `v'[`n']
-			if `n_var'==1 	file write `name'__tab `"`val'"'
-			else 			file write `name'__tab `" & `val'"'
-			loc n_var = `n_var' + 1
-		}
-		file write `name'__tab " \\" _n
-	}
+
+end
+
+cap prog drop statex_from_mat 
+prog statex_mat
+	syntax, mat(namelist=1) [name(string)]
 end
 
 cap prog drop __table_est_extract
