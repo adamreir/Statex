@@ -208,8 +208,6 @@ prog statex_row
 			pT->append_to_line(`"\cmidrule(lr){`l'-`r'} "',0)
 		}
 	}
-	
-	//file write `name'__tab `""' _n
 end
 
 
@@ -250,6 +248,7 @@ prog table_add_midrule
 	
 end
 
+// FLAG 
 cap prog drop table_from_data
 prog table_from_data
 	syntax varlist, [mat(namelist max=1) name(namelist max=1)]
@@ -263,8 +262,202 @@ prog table_from_data
 end
 
 cap prog drop statex_from_mat 
-prog statex_mat
-	syntax, mat(namelist=1) [name(string)]
+prog statex_from_mat
+	syntax, b(string asis) [name(string) rowlabels(string asis) titles(string asis) se(namelist max=1) p(namelist max=1)] //Flag add 
+	
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	mata: st_local("ncols_statex", strofreal(pT->ncols))
+	
+	* Parse options with suboptions into main components and suboptions
+	******************************
+	
+	// b
+	gettoken bmain bopt : b, parse(",")
+	loc 0 `bmain'
+	syntax [namelist(max=1)]
+	loc b `namelist'
+	loc 0 `bopt'
+	syntax, [format(string)]
+	loc bformat `format'
+	
+	// se
+	gettoken semain seopt : se, parse(",")
+	loc 0 `semain'
+	syntax [namelist(max=1)]
+	loc se `namelist'
+	loc 0 `seopt'
+	syntax, [format(string) nose]
+	loc seformat `format'
+	if "`se'"=="" | "`nose'"!="" 	loc show_se = 0
+	else 							loc show_se = 1
+	
+	// Flag: se: accept "se(semat, nose)" to be able to use se's to produce stars without showing ses. 
+	
+	* Check syntax
+	**************
+	
+	// Matrices exists: 
+	cap confirm matrix `b'
+	if _rc {
+		di as error "Matrix `b' not found"
+		exit 198
+	}
+	
+	if "`se'"!="" & "`p'"!="" {
+		di as error "Cannot provide both 'se' matrix and 'p' matrix"
+	} 
+	
+	if "`se'"!="" {
+		cap confirm matrix `se'
+		if _rc {
+			di as error "Matrix `se' not found"
+			exit 198
+		}
+	}
+	
+	if "`p'"!="" {
+		cap confirm matrix `p'
+		if _rc {
+			di as error "Matrix `p' not found"
+			exit 198
+		}
+	}
+	
+	// Flag: if se matrix provided: Create p matrix.
+	
+	// Expand format lists
+	if `'"`bformat'"'!="" {
+		loc n_formats : word count `bformat'
+		loc last_format : word `n_formats' of `bformat'
+		
+		forv n = 1/`=`ncols_statex'-`n_formats'' {
+			loc bformat = `"`bformat' `last_format'"'
+		}
+	}
+	
+	if `'"`seformat'"'!="" {
+		loc n_formats : word count `seformat'
+		loc last_format : word `n_formats' of `seformat'
+		
+		forv n = 1/`=`ncols_statex'-`n_formats'' {
+			loc bformat = `"`seformat' `last_format'"'
+		}
+	}
+	
+	// Check valid formats:
+	if "`bformat'"!="" {
+		loc all_formats = `"`bformat'"'
+		while "`all_formats'"!="" {
+			gettoken current_format all_formats : all_formats
+			cap confirm format `current_format'
+			if _rc {
+				di as error "'`current_format'' not a valid format (provided as a sub-option to the 'b' option)"
+				exit 198
+			}
+		}
+	}
+	
+	if "`seformat'"!="" {
+		loc all_formats = `"`seformat'"'
+		while "`all_formats'"!="" {
+			gettoken current_format all_formats : all_formats
+			cap confirm format `current_format'
+			if _rc {
+				di as error "'`current_format'' not a valid format (provided as a suboption to the 'se' option)"
+				exit 198
+			}
+		}
+	}
+	di "All formats OK"
+	
+	// Fill `rowlabels' with matrix rownames
+	if `"`rowlabels'"'=="rownames" loc rownames : rownames `b' 
+	
+	// Check correct number of rowlabes: 
+	if !inlist("`rowlabels'", "", "rownames") {
+		loc n_rowlabels : word count `rowlabels'
+		cap assert `n_rowlabels'==rowsof(`b')
+		if _rc {
+			di as error "Number of Provided rowlabels (`n_rowlabels') is not the same as the number of rows of b (`=rowsof(`b')')."
+		}
+	}
+	
+	// Correct number of implied columns: 
+	loc ncols = colsof(`b')
+	if `"`rowlabels'"'!="" loc ++ncols
+	if `"`rowlabels'"'!="" loc ncols_p1 = ", including one for row labes"
+	if `ncols'!=`ncols_statex' {
+		di as error "Wrong number of implied columns. Table has `ncols_stable' columns, received `ncols'`ncols_p1'."
+		exit 198
+	}
+	
+	* Write
+	*******
+	
+	
+	forv row = 1/`=rowsof(`b')' {
+		mata: pT->add_line("")
+		// b	
+		
+		// flag: if rowlabels provided: ... add rowlabel "loc start_col=2 ; "
+		
+		forv col = 1/`=colsof(`b')' {
+			if `"`bformat'"'!="" gettoken current_format bformat : bformat
+			loc val = `b'[`row',`col']
+			// Flag: do p stuff
+			if `"`current_format'"'!="" loc val : display `current_format' `val'
+			
+			
+			if `col'>1 mata: pT->append_to_line("&", 0)
+			mata: pT->append_to_line(`"`val'"',1)
+		}
+		
+		mata: pT->append_to_line(`" \\ "', 0)
+		
+		// se 
+		
+		if `show_se' {
+		// Flag: if has rowlabel : loc start_col=2 ; forv `start_col'/`=colsof(`b')'
+		forv col = 1/`=colsof(`b')' {
+			if `"`seformat'"'!="" gettoken current_format seformat : seformat
+			loc val = `se'[`row',`col']
+			// Flag: do p stuff
+			if `"`current_format'"'!="" loc val : display `current_format' `val'
+			
+			
+			if `col'>1 mata: pT->append_to_line("&", 0)
+			mata: pT->append_to_line(`"`val'"',1)
+		}		
+		}
+	}
+	
+	
+end
+
+/*
+mat tmp = 1,2 \ 3,4
+mat list tmp
+
+statex_new, n_cols(3)
+
+set trace on 
+set tracedepth 1
+
+statex_from_mat, b(tmp, format(%3.2fc)) rowlabels(row1 row2 )
+statex_list
+
+tmp, b(name, format(%3.2fc))
+
+
+loc n = 1
+loc ++n
+di `n'
+*/
+
+cap prog drop statex_diff_table
+prog statex_diff_table
+
 end
 
 cap prog drop __table_est_extract

@@ -1,5 +1,5 @@
 
-// Error codes https://www.stata.com/manuals/perror.pdf#perror
+// Error codes: https://www.stata.com/manuals/perror.pdf#perror
 ****************
 * Table object *
 ****************
@@ -55,8 +55,8 @@ void Table::append_to_line(string scalar line, real scalar pad) {
 		line = pad_string(line)
 	}
 	content[rows(content),] = content[rows(content),] + line
-	printf(line)
-	printf("cell_overflow:" + strofreal(cell_overflow))
+	//printf(line)
+	//printf("cell_overflow:" + strofreal(cell_overflow) + "\n")
 }
 
 // Keeps track of Panel index (A, B, ...). Sets `panel' to A, B, C etc. when called. 
