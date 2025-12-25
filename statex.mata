@@ -50,9 +50,9 @@ void Table::add_line(string scalar line) {
 	cell_overflow = 0
 }
 
-void Table::append_to_line(string scalar line, real scalar pad) {
+void Table::append_to_line(string scalar line, real scalar pad, string scalar lcr) {
 	if (pad==1) {
-		line = pad_string(line)
+		line = pad_string(line, lcr)
 	}
 	content[rows(content),] = content[rows(content),] + line
 	//printf(line)
@@ -79,7 +79,7 @@ void Table::panel() {
 
 // Takes the cell content (string), and pads content to have length cell_width. 
 // Keeps track of overflow on it's own (as long as the local `overflow' is not erased)
-string scalar Table::pad_string(string scalar content) {
+string scalar Table::pad_string(string scalar content, string scalar lcr) {
 	real scalar overflow
 	real scalar left
 	real scalar right
@@ -96,14 +96,32 @@ string scalar Table::pad_string(string scalar content) {
     }
 	cell_overflow = 0
     
-    left  = floor((current_width - n) / 2)
-    right = current_width - n - left
+    if (lcr=="left")   left = 0 // Left orient: no padding to the left
+	if (lcr=="center") left = floor((current_width - n) / 2) // Center: split
+    if (lcr=="right")  left = (current_width - n) // Right: All
+	right = current_width - n - left
     
     padded = "" // empty string
     padded =  " "*left + content + " "*right
     
     return(padded)
 }
+end
+
+
+mata 
+mata drop func()
+void func(real scalar lcr) {
+	if (lcr==1) printf("left")
+	
+	if (lcr==2) {
+		printf("center")
+	}
+	if (lcr==3) {
+		printf("right")
+	}
+}
+func(1)
 end
 
 

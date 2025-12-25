@@ -165,20 +165,20 @@ prog statex_row
 	if !`has_multicolumn' {
 		loc n = 0
 		if `blank' {
-			mata: pT->append_to_line("",1)
+			mata: pT->append_to_line("",1,"left")
 			loc ++n
 		}
 		
 		foreach elem of local row {
-			if `n'>0 mata: pT->append_to_line("&", 0)
-			mata: pT->append_to_line(`"`bold_start'`elem'`bold_end'"',1)
+			if `n'>0 mata: pT->append_to_line("&", 0, "no")
+			mata: pT->append_to_line(`"`bold_start'`elem'`bold_end'"',1, "left")
 			loc ++n
 		}
 	}
 	else {
 		loc n = 0
 		if `blank' {
-			mata: pT->append_to_line("&", 0)
+			mata: pT->append_to_line("&", 0, "no")
 		}
 		
 		
@@ -186,12 +186,12 @@ prog statex_row
 			gettoken n_cols multicolumn : multicolumn
 			if `has_align' 	gettoken a align : align
 			else 			loc a = "c"
-			if `n'>0 mata: pT->append_to_line("&", 0)
-			mata pT->append_to_line(`"\multicolumn{`n_cols'}{`a'}{`bold_start'`elem'`bold_end'}"',1)
+			if `n'>0 mata: pT->append_to_line("&", 0, "no")
+			mata pT->append_to_line(`"\multicolumn{`n_cols'}{`a'}{`bold_start'`elem'`bold_end'}"',1, "left")
 			loc n = `n'+1
 		}
 	}
-	mata: pT->append_to_line(`"\\ "', 0)
+	mata: pT->append_to_line(`"\\\\ "', 0, "no")
 	mata: pT->cell_overflow = 0
 	
 	loc has_midrule = `"`midrule'"'!=""
@@ -205,7 +205,7 @@ prog statex_row
 				di as error `"midrule must consists of lists of numbers, received `l'-`r'"' // Flag: move this code up to the beguinning of the program
 			}
 			
-			pT->append_to_line(`"\cmidrule(lr){`l'-`r'} "',0)
+			pT->append_to_line(`"\cmidrule(lr){`l'-`r'} "',0, "no")
 		}
 	}
 end
@@ -234,13 +234,13 @@ prog statex_panel
 	mata: pT->panel()
 	mata: st_local("ncols", strofreal(pT->ncols))
 	
-	mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`bold_start'Panel `panel': `text'`bold_end'} \\"')
+	mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`bold_start'Panel `panel': `text'`bold_end'} \\\\"')
 end
 
 
 cap prog drop table_add_midrule
 prog table_add_midrule
-	syntax, name(namelist max=1)
+	syntax, [name(namelist max=1)]
 
 	if "`name'"=="" mata: _ = statex.get_current()
 	mata: pT = statex.get_table("`name'")
@@ -270,7 +270,7 @@ prog statex_from_mat
 	mata: st_local("ncols_statex", strofreal(pT->ncols))
 	
 	* Parse options with suboptions into main components and suboptions
-	******************************
+	*******************************************************************
 	
 	// b
 	gettoken bmain bopt : b, parse(",")
@@ -409,11 +409,11 @@ prog statex_from_mat
 			if `"`current_format'"'!="" loc val : display `current_format' `val'
 			
 			
-			if `col'>1 mata: pT->append_to_line("&", 0)
-			mata: pT->append_to_line(`"`val'"',1)
+			if `col'>1 mata: pT->append_to_line("&", 0, "no")
+			mata: pT->append_to_line(`"`val'"',1, "center")
 		}
 		
-		mata: pT->append_to_line(`" \\ "', 0)
+		mata: pT->append_to_line(`" \\ "', 0, "no")
 		
 		// se 
 		
@@ -426,8 +426,8 @@ prog statex_from_mat
 			if `"`current_format'"'!="" loc val : display `current_format' `val'
 			
 			
-			if `col'>1 mata: pT->append_to_line("&", 0)
-			mata: pT->append_to_line(`"`val'"',1)
+			if `col'>1 mata: pT->append_to_line("&", 0, "no")
+			mata: pT->append_to_line(`"`val'"', 1, "center")
 		}		
 		}
 	}
@@ -455,14 +455,16 @@ loc ++n
 di `n'
 */
 
+// FLAG
 cap prog drop statex_diff_table
 prog statex_diff_table
 
 end
 
+// Done
 cap prog drop __table_est_extract
 prog __table_est_extract // Take ests stored in namelist, store in (new) frame __table_res, and label (if option `label')
-	syntax namelist, name(namelist max=1) [label drop(string) keep(string) order(string)] // Pick out name and move to parent function
+	syntax namelist, [name(namelist max=1)] [label drop(string) keep(string) order(string)] // Pick out name and move to parent function
 	
 	//loc namelist = "reg1 reg2 reg4"
 	//loc name = "test" 
@@ -471,29 +473,27 @@ prog __table_est_extract // Take ests stored in namelist, store in (new) frame _
 	
 	* Syntax
 	********
-	// Table is open
-	cap assert ${`name'__tab_open}==1
-	if _rc {
-		di as error `"Table `name' not open"'
-		exit 198
-	}
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	mata: st_local("ncols_statex", strofreal(pT->ncols))
 	
-	// Correct number of results/columns
+	// Check that the user provided the correct number of results/columns
 	loc n_res : list sizeof namelist
-	cap assert `n_res' + 1 == ${`name'__tab_n_cols} // column for varnames
+	cap assert `n_res' + 1 == `ncols_statex' // column for varnames
 	if _rc {
-		di as error "Wrong number of estimation results. Received `n_res', expected `=${`name'__tab_n_cols}-1' (${`name'__tab_n_cols} minus one column for the varlist)"
+		di as error "Wrong number of estimation results. Received `n_res', expected `=`ncols_statex'-1'" 
+		di "(The table has `ncols_statex' columns, of which one is used for the varlist)"
 		exit 198
 	}
 	
-	// Check that all ests exists
+	// Check that all provided ests exists
 	qui estimates dir
 	loc stored_ests = "`r(names)'"
 
 	foreach est of local namelist {
 		loc exists = 0
 		foreach stored_est of local stored_ests {
-			if "`est'"=="`stored_est'" loc exists = 1
+			if "`est'"=="`stored_est'" loc exists = 1 // FLAG: Can plase di as error -> exit here? 
 		}
 		cap assert `exists'
 		if _rc {
@@ -505,12 +505,13 @@ prog __table_est_extract // Take ests stored in namelist, store in (new) frame _
 	cap frame drop __table_res
 	frame create __table_res
 	frame __table_res: qui g varlist = ""
-	global table_current = 1
-	global table_varlist_all = ""
+	global table_varlist_all = "" //??
 	
 	//loc namelist = "reg1 reg2"
+	loc suffix = 1
 	foreach est of local namelist {
-		__table_est_frame, est(`est')
+		__table_est_frame, est(`est') suffix(`suffix')  // Adds estimated params to frame
+		loc ++suffix
 	}
 	frame __table_res: qui replace varlist = subinstr(varlist, "c.", " ", .)
 	
@@ -539,6 +540,7 @@ prog __table_est_extract // Take ests stored in namelist, store in (new) frame _
 			loc current_order = `current_order' + 1
 		}
 		frame __table_res: sort order init_order
+		frame __table_res: drop order init_order
 	}
 	
 	
@@ -556,43 +558,51 @@ end
 
 cap prog drop __table_est_table
 prog __table_est_table
-	syntax, name(string) n_cols(integer) b(string) se(string)
+	syntax, [name(string)] n_cols(integer) b(string) se(string)
 	// Reads params from frame and writes to table. 
 	
 	mata: pT = statex.get_table("`name'")
-	
 	frame __table_res: loc n_vars = _N
+	mata: pT->add_line(`""')
 	
 	forv row_i = 1/`n_vars' {
 		frame __table_res: loc var = varlist[`row_i']
-		mata: pT->add_line(`"`var'"')
+		mata: pT->append_to_line(`"`var'"', 1, "left")
 		
 		// beta/stars
-		forv col_i = 1/`n_cols' {			
+		mata: st_local("stars", pT->stars)
+		gettoken 1star stars : stars
+		gettoken 2star 3star : stars
+		
+		forv col_i = 1/`n_cols' {	
 			frame __table_res: loc __b = b`col_i'[`row_i']
 			loc __b = strofreal(`__b', "`b'")
 			frame __table_res: loc __p = p`col_i'[`row_i']
-			if 		`__p'<${`name'__3stars} loc __stars = `"\sym{***}"'
-			else if `__p'<${`name'__2stars} loc __stars = `"\sym{**}"'
-			else if `__p'<${`name'__1stars} loc __stars = `"\sym{*}"'
+			if 		`__p'<`3star' loc __stars = `"\sym{***}"'
+			else if `__p'<`2star' loc __stars = `"\sym{**}"'
+			else if `__p'<`1star' loc __stars = `"\sym{*}"'
 			else loc __stars = ""
 			
-			if `__b'!=.		mata pT->append_to_line(`" & `__b'`__stars'"')
-			else			mata pT->append_to_line(`" & "'
+			mata pT->append_to_line(`"&"', 0, "no")
+			if `__b'!=.		mata pT->append_to_line(`"`__b'`__stars'"', 1, "center")
 		}
-		file write `name'__tab " \\" _n
+		mata: pT->append_to_line(`"\\\\ "', 0, "no")
+		mata: pT->add_line(`""')
+		mata pT->append_to_line("", 1, "left")
 		
 		// se
 		forv col_i = 1/`n_cols' {			
 			frame __table_res: loc __se = se`col_i'[`row_i']
-			loc __se = strofreal(`__se', "`se'")
+			loc   __se = strofreal(`__se', "`se'")
 			frame __table_res: loc __p = p`col_i'[`row_i']
 			
-			if `__se'!=. 	file write `name'__tab `" & (`__se')"'
-			else 			file write `name'__tab `" & "'
+			mata pT->append_to_line(`"&"', 0, "no")
+			if `__se'!=. 	mata pT->append_to_line(`"(`__se')"', 1, "center")
 		}
-		file write `name'__tab " \\" _n
-		if `row_i'!=`n_vars' file write `name'__tab " [1em]" _n
+		mata: pT->append_to_line(`"\\\\"', 0, "no")
+		if `row_i'!=`n_vars' mata: pT->add_line("[1em]")
+		mata: pT->add_line(`""')
+		//else 				 mata: pT->add_line(`""')
 	}
 	
 end
@@ -616,7 +626,7 @@ tmp reg1
 
 cap prog drop table_add_est
 prog table_add_est
-	syntax namelist, name(namelist max=1) label b(passthru) se(passthru) [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) shortmidrule]	
+	syntax namelist, [name(namelist max=1)] label b(passthru) se(passthru) [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) shortmidrule]	
 	* Syntax
 	********
 	// Table is open
@@ -645,8 +655,8 @@ prog table_add_est
 	
 	cap assert `nres'==`ncols'-1
 	if _rc {
-		di as error "Number of estimation results provided (`nres') not the same as the number expected (`=`ncols'-1)"
-		di as error "Expects one less estimation result than the number of columns in table (the first is reserve variable names)."
+		di as error "Number of estimation results provided (`nres') not the same as the number expected (`=`ncols'-1')"
+		di as error "	Expects one less estimation result than the number of columns in table (the first is reserved for variable names)."
 		exit 198
 	}
 	
@@ -667,20 +677,21 @@ prog table_add_est
 	if `"`absorbed'"'!="" {
 		foreach abs of local absorbed {
 			loc abs = subinstr(`"`abs'"', "#", `"\#"', .)
-			file write `name'__tab "`abs'" // Write FE text
+			mata: pT->add_line("`abs'", 1) // Write FE text
 			
 			// Write checkmarks
-			loc param_cols = ${`name'__tab_n_cols} - 1 
+			loc param_cols = `ncols' - 1 
 			forv n = 1/`param_cols' {
-				file write `name'__tab `" & \checkmark"' 
+				mata: pT->append_to_line(`" & \checkmark"', 0, "center")
 			}
-			file write `name'__tab " \\" _n
+			//mata: pT->append_to_line(" \\", 0)
 		}
 	}
 	
 	if "`nostats'"=="" {
 		if "`shortmidrule'"=="" table_add_midrule, name(`name')
-		else	file write `name'__tab `"\cmidrule(lr){2-${`name'__tab_n_cols}} "'
+		else mata: pT->append_to_line(`"\cmidrule(lr){2-`ncols'}"', 0, "no")
+		mata: pT->add_line("")
 		// Pars stats options by splitting at first comma (if it exists)
 		// i.e. stats(a b c, fmt(%9.0fc)) -> stats_main_opt = "a b c" & stats_other_opt = "fmt(%9.0fc)"
 		//if `"`stat'"'=="" loc stat = ""
@@ -702,11 +713,8 @@ program table_add_est_stats
 	* Syntax
 	********
 	// Table is open
-	cap assert ${`name'__tab_open}==1
-	if _rc {
-		di as error `"Table `name' not open"'
-		exit 198
-	}
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
 	
 	if "`label'"!=""  	loc option_label  = 1
 	else				loc option_label  = 0
@@ -725,21 +733,21 @@ program table_add_est_stats
 	foreach stat_name of local stats {
 		// Label stats
 		loc stat_label = ""
-		loc stat_label_written = 0
+		loc stat_label_written = 0 // FLAG: Can just do if, else if etc?
 		gettoken stat_label labels : labels  // Use user provided label if provided
 		if "`stat_label'"!="" {
-			file write `name'__tab "`stat_label'"
+			mata pT->append_to_line("`stat_label'", 1, "left")
 			loc stat_label_written = 1
 		}
 		if !`stat_label_written' & `"`stat_name'"'=="N" {
-			file write `name'__tab "Observations"
+			mata pT->append_to_line("Observations", 1, "left")
 			loc stat_label_written = 1
 		}
 		if !`stat_label_written' & `"`stat_name'"'=="r2"	{
-			file write `name'__tab "\$R^2\$"
+			mata pT->append_to_line("\$R^2\$", 1, "left")
 			loc stat_label_written = 1
 		}
-		if !`stat_label_written' file write `name'__tab `"`stat_name'"'
+		if !`stat_label_written' mata pT->append_to_line(`"`stat_name'"', 1, "left")
 		// Format stats
 		if `option_format' gettoken stat_format format : format
 		if `"`stat_format'"'=="" loc stat_format = "`last_stat_format'" // Use last provided 
@@ -751,10 +759,12 @@ program table_add_est_stats
 			loc stat = e(`stat_name')
 			if `stat'==. loc stat = ""
 			if "`stat'"!="" loc stat = string(`stat', "`stat_format'")
-			file write `name'__tab " & `stat'"
+			mata pT->append_to_line("&", 0, "no")
+			mata pT->append_to_line("`stat'", 1, "center")
 		} 
 		
-		file write `name'__tab " \\" _n
+		mata: pT->append_to_line(`"\\\\"', 0, "no")
+		mata: pT->add_line("")
 	}
 end
 
@@ -762,15 +772,15 @@ end
 
 cap prog drop __table_est_frame
 prog __table_est_frame // Take est and place in (i.e. add to) frame
-	syntax, /*to(string)*/ est(string) 
+	syntax, /*to(string)*/ est(string) suffix(string)
 	
 	//loc est = "reg1"
 	
 	frame __table_res {
-		qui g double b${table_current} = .
-		qui g double se${table_current} = .
-		qui g double t${table_current} = .
-		qui g double p${table_current} = .
+		qui g double b`suffix' = .
+		qui g double se`suffix' = .
+		qui g double t`suffix' = .
+		qui g double p`suffix' = .
 	}
 	
 	qui estimates restore `est'
@@ -799,15 +809,14 @@ prog __table_est_frame // Take est and place in (i.e. add to) frame
 					qui set obs `=_N+1'
 					qui replace varlist = "`varname'" if _n==_N
 				}
-				qui replace b${table_current}  = `b'  if varlist=="`varname'"
-				qui replace se${table_current} = `se' if varlist=="`varname'"
-				qui replace t${table_current}  = `t'  if varlist=="`varname'"
-				qui replace p${table_current}  = `p'  if varlist=="`varname'"
+				qui replace b`suffix'  = `b'  if varlist=="`varname'"
+				qui replace se`suffix' = `se' if varlist=="`varname'"
+				qui replace t`suffix'  = `t'  if varlist=="`varname'"
+				qui replace p`suffix'  = `p'  if varlist=="`varname'"
 			}
 		}
 	}
 	
-	global table_current = ${table_current} + 1
 	global table_varlist_all : list clean global(table_varlist_all)
 	global table_varlist_all : list uniq global(table_varlist_all)	
 end

@@ -2,6 +2,43 @@ mata: mata clear
 do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 do "C:/Users/`=c(username)'/Documents/GitHub/statex/make_latex_table.do"
 
+statex_new, n_cols(3)
+mata: pT = statex.get_table("Table1")
+
+clear
+set obs 20000
+g x1 = rnormal()
+g x2 = rnormal()
+g y = x1 + x2 + rnormal()
+
+lab var x1 "X1"
+
+eststo est1: qui reg y x1 x2
+eststo est2: qui reg y x1 x2, r
+
+statex_row, row("abc" "def") blank //align(c c) multicolumn(1 1)
+table_add_midrule 
+
+//set trace on 
+set tracedepth 2
+
+table_add_est est1 est2, label b(%3.2fc) se(%3.2fc) 
+statex_list
+	
+
+foreach loc in 1star 2star 3star {
+	di "`loc':``loc''"
+}
+
+
+__table_est_extract est1 est2, label order(x2 x1) drop(_cons)  //[label drop(string) keep(string) order(string)]
+frame __table_res: li
+
+
+
+
+
+
 statex_new, n_cols(2)
 mata: pT = statex.get_table("Table1")
 
