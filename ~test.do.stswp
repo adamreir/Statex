@@ -17,34 +17,28 @@ eststo est1: qui reg y x1 x2
 eststo est2: qui reg y x1 x2, r
 
 statex_row, row("abc" "def") blank //align(c c) multicolumn(1 1)
-statex_add_midrule 
 
 //set trace on 
 set tracedepth 2
 
-statex_panel, text("A panel")
+statex_add_midrule
+statex_panel_header, text("A panel")
+statex_add_est est1 est2, label b(%3.2fc) //se(%3.2fc) 
+statex_add_midrule
+statex_panel_header, text("Another panel")
 statex_add_est est1 est2, label b(%3.2fc) shortmidrule //se(%3.2fc) 
-statex_panel, text("Another panel")
-statex_add_est est1 est2, label b(%3.2fc) shortmidrule //se(%3.2fc) 
-__statex_add_footer, robust
-statex_closem
+statex_close, robust
 statex_list
 
 //mata: pT->write_table("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test1.tex")
 
 statex_write, filename("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test1.tex") replace
 
+exit198
 //mata: pT->write_table("C:\Users\s16501\Documents\GitHub\Statex\text_table3.tex")
 
-mata
-tab = pT->content
-for (i = 1; i <= rows(tab); i++) {
-	row = tab[i, 1]
-	printf(row + "\n")
-}
-end
 
-
+/*
 
 mata 
 

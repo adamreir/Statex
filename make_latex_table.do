@@ -209,8 +209,8 @@ prog statex_row
 end
 
 
-cap prog drop statex_panel
-prog statex_panel
+cap prog drop statex_panel_header
+prog statex_panel_header
 	syntax, ///
 		[name(namelist max=1)] ///
 		text(string) ///
@@ -642,7 +642,7 @@ tmp reg1
 
 cap prog drop statex_add_est
 prog statex_add_est
-	syntax namelist, [name(namelist max=1)] label b(passthru) [se(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) shortmidrule stars(passthru)]	
+	syntax namelist, [name(namelist max=1)] label b(passthru) [se(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) longmidrule stars(passthru)]	
 	
 	* Syntax
 	********
@@ -650,10 +650,10 @@ prog statex_add_est
 	if "`name'"=="" mata: _ = statex.get_current()
 	mata: pT = statex.get_table("`name'")
 	
-	if "`shortmidrule'"!="" {
+	if "`longmidrule'"!="" {
 		cap assert "`nostats'"==""
 		if _rc {
-			di as error "Cannot specify both options 'shortmidrule' and 'nostats'."
+			di as error "Cannot specify both options 'longmidrule' and 'nostats'."
 			exit 198
 		}
 	}
@@ -718,8 +718,8 @@ prog statex_add_est
 	}
 	
 	if "`nostats'"=="" {
-		if "`shortmidrule'"=="" statex_add_midrule, name(`name')
-		else mata: pT->append_to_line(`"\cmidrule(lr){2-`ncols'}"', 0, "no")
+		if "`longmidrule'"!="" statex_add_midrule, name(`name')
+		else mata: pT->append_to_line(`" \cmidrule(lr){2-`ncols'}"', 0, "no")
 		mata: pT->add_line("")
 		// Pars stats options by splitting at first comma (if it exists)
 		// i.e. stats(a b c, fmt(%9.0fc)) -> stats_main_opt = "a b c" & stats_other_opt = "fmt(%9.0fc)"
