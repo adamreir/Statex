@@ -17,14 +17,57 @@ eststo est1: qui reg y x1 x2
 eststo est2: qui reg y x1 x2, r
 
 statex_row, row("abc" "def") blank //align(c c) multicolumn(1 1)
-table_add_midrule 
+statex_add_midrule 
 
-set trace on 
+//set trace on 
 set tracedepth 2
 
-statex_add_est est1 est2, label b(%3.2fc) //se(none) //se(%3.2fc) 
-statex_list
+statex_add_est est1 est2, label b(%3.2fc) shortmidrule //se(%3.2fc) 
+__statex_add_footer, robust
+statex_close
+
+statex_write, filename("C:\Users\s16501\Documents\GitHub\Statex\text_table3.tex") replace
+
+//mata: pT->write_table("C:\Users\s16501\Documents\GitHub\Statex\text_table3.tex")
+
+mata
+tab = pT->content
+for (i = 1; i <= rows(tab); i++) {
+	row = tab[i, 1]
+	printf(row + "\n")
+}
+end
+
+
+
+mata 
+
 	
+	fh = _fopen("C:\Users\s16501\Documents\GitHub\Statex\test_file.txt", "w")
+
+	_fput(fh, "abc")
+	_fput(fh, "123")
+	_fclose(fh)
+
+end
+
+
+
+
+
+
+statex_list
+
+
+
+
+mata: st_local("used_stars", strofreal(pT->used_stars))
+di "`used_stars'"
+mata: st_local("stars", pT->stars)
+di "`stars'"
+
+
+mata: pT->used_stars
 
 foreach loc in 1star 2star 3star {
 	di "`loc':``loc''"

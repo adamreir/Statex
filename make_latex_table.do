@@ -189,7 +189,7 @@ prog statex_row
 			loc n = `n'+1
 		}
 	}
-	mata: pT->append_to_line(`"\\\\ "', 0, "no")
+	mata: pT->append_to_line(`"\\ "', 0, "no")
 	mata: pT->cell_overflow = 0
 	
 	loc has_midrule = `"`midrule'"'!=""
@@ -203,7 +203,7 @@ prog statex_row
 				di as error `"midrule must consists of lists of numbers, received `l'-`r'"' // Flag: move this code up to the beguinning of the program
 			}
 			
-			pT->append_to_line(`"\cmidrule(lr){`l'-`r'} "',0, "no")
+			pT->append_to_line(`" \cmidrule(lr){`l'-`r'} "',0, "no")
 		}
 	}
 end
@@ -232,12 +232,12 @@ prog statex_panel
 	mata: pT->panel()
 	mata: st_local("ncols", strofreal(pT->ncols))
 	
-	mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`bold_start'Panel `panel': `text'`bold_end'} \\\\"')
+	mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`bold_start'Panel `panel': `text'`bold_end'} \\"')
 end
 
 
-cap prog drop table_add_midrule
-prog table_add_midrule
+cap prog drop statex_add_midrule
+prog statex_add_midrule
 	syntax, [name(namelist max=1)]
 
 	if "`name'"=="" mata: _ = statex.get_current()
@@ -562,8 +562,10 @@ end
 
 cap prog drop __table_est_table
 prog __table_est_table
-	syntax, [name(string) nostars] n_cols(integer) b(string) se(string)
+	syntax, [name(string) stars(string)] n_cols(integer) b(string) se(string)
 	// Reads params from frame and writes to table. 
+	
+	
 	
 	mata: pT = statex.get_table("`name'")
 	frame __table_res: loc n_vars = _N
@@ -574,23 +576,26 @@ prog __table_est_table
 		mata: pT->append_to_line(`"`var'"', 1, "left")
 		
 		// beta/stars
-		mata: st_local("stars", pT->stars)
-		gettoken 1star stars : stars
-		gettoken 2star 3star : stars
+		mata: st_local("starlist", pT->stars)
+		gettoken 1star starlist : starlist
+		gettoken 2star 3star : starlist
 		
 		forv col_i = 1/`n_cols' {	
 			frame __table_res: loc __b = b`col_i'[`row_i']
 			loc __b = strofreal(`__b', "`b'")
-			frame __table_res: loc __p = p`col_i'[`row_i']
-			if 		`__p'<`3star' loc __stars = `"\sym{***}"'
-			else if `__p'<`2star' loc __stars = `"\sym{**}"'
-			else if `__p'<`1star' loc __stars = `"\sym{*}"'
-			else loc __stars = ""
+			
+			if "`stars'"!="none" {
+				frame __table_res: loc __p = p`col_i'[`row_i']
+				if 		`__p'<`3star' loc __stars = `"\sym{***}"'
+				else if `__p'<`2star' loc __stars = `"\sym{**}"'
+				else if `__p'<`1star' loc __stars = `"\sym{*}"'
+				else loc __stars = ""
+			}
 			
 			mata pT->append_to_line(`"&"', 0, "no")
 			if `__b'!=.		mata pT->append_to_line(`"`__b'`__stars'"', 1, "center")
 		}
-		mata: pT->append_to_line(`"\\\\ "', 0, "no")
+		mata: pT->append_to_line(`"\\ "', 0, "no")
 		
 		// se
 		if "`se'"!="none" {
@@ -607,7 +612,7 @@ prog __table_est_table
 				if `__se'!=. 	mata pT->append_to_line(`"(`__se')"', 1, "center")
 			}
 			
-			mata: pT->append_to_line(`"\\\\"', 0, "no")
+			mata: pT->append_to_line(`"\\"', 0, "no")
 		}
 		
 		
@@ -637,7 +642,8 @@ tmp reg1
 
 cap prog drop statex_add_est
 prog statex_add_est
-	syntax namelist, [name(namelist max=1)] label b(passthru) [se(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) shortmidrule]	
+	syntax namelist, [name(namelist max=1)] label b(passthru) [se(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) shortmidrule stars(passthru)]	
+	
 	* Syntax
 	********
 	// Table is open
@@ -652,8 +658,17 @@ prog statex_add_est
 		}
 	}
 	
-	// Default formats
+	cap assert inlist("`stars'", "", "stars(none)")
+	if _rc {
+		di as error `"Option "stars" only accepts "none". Received "`stars'". Set star levels when opening a new table. "'
+		exit 198
+	}
+	
+	// Default formats [FLAG: se should be multiple options? se, t or p?]
 	if `"`se'"'=="" loc se = "se(%4.3fc)"
+	
+	if "`se'"!="se(none)" 	mata: pT->used_paren = 1
+	if "`stars'"!="none"	mata: pT->used_stars = 1
 	
 	// Check that namelist contains res that exists
 	foreach estname of local namelist {
@@ -685,7 +700,7 @@ prog statex_add_est
 	
 	// export to latex file. 
 	loc n_cols : list sizeof namelist
-	__table_est_table, n_cols(`n_cols') name(`name') `b' `se'
+	__table_est_table, n_cols(`n_cols') name(`name') `b' `se' `stars'
 	
 	// Flag: Should look for these variables in `absorb' (or wherever they are stored), as well as the usual varlists. 
 	if `"`absorbed'"'!="" {
@@ -703,7 +718,7 @@ prog statex_add_est
 	}
 	
 	if "`nostats'"=="" {
-		if "`shortmidrule'"=="" table_add_midrule, name(`name')
+		if "`shortmidrule'"=="" statex_add_midrule, name(`name')
 		else mata: pT->append_to_line(`"\cmidrule(lr){2-`ncols'}"', 0, "no")
 		mata: pT->add_line("")
 		// Pars stats options by splitting at first comma (if it exists)
@@ -777,7 +792,7 @@ program statex_add_est_stats
 			mata pT->append_to_line("`stat'", 1, "center")
 		} 
 		
-		mata: pT->append_to_line(`"\\\\"', 0, "no")
+		mata: pT->append_to_line(`"\\"', 0, "no")
 		mata: pT->add_line("")
 	}
 end
@@ -836,14 +851,13 @@ cap prog drop table_indicate
 prog table_indicate
 end
 
-cap prog drop __table_add_footer
-prog __table_add_footer
+cap prog drop __statex_add_footer
+prog __statex_add_footer
 	/// FLAG : add option to turn subnotes off (e.g. nostars nose etc.)
-	syntax, [name(namelist max=1) stars robust cluster(string max=1) custom(string asis)]
+	syntax, [name(namelist max=1) stars robust cluster(string asis) custom(string asis)]
 	
 	* Syntax
 	********
-	// Table is open
 	if "`name'"=="" mata: _ = statex.get_current()
 	mata: pT = statex.get_table("`name'")
 	
@@ -856,67 +870,55 @@ prog __table_add_footer
 	* Add Footer
 	************
 	
+	statex_add_midrule, name("`name'")
+	
+	mata: st_local("used_stars", strofreal(pT->used_stars))
 		
-	if "`stars'"!="" {
+	if `used_stars' | "`stars'"!="" {
 		// Extract and format numbers
 		mata: st_local("stars", pT->stars)
-		gettoken 1star stars : stars
-		gettoken 2star 3star : stars
+		gettoken 1stars stars : stars
+		gettoken 2stars 3stars : stars
 		forv n = 1/3 {
-			loc `n'stars : string(``n'stars', %3.2fc ``n'stars')
+			di "`n'stars: ``n'stars'"
+			loc `n'stars = string(``n'stars', "%3.2fc")
 		}
 		
-		`"\multicolumn{`ncols'}{l}{\footnotesize \sym{*} \(p<`1stars'\), \sym{**} \(p<`2stars'\), \sym{***} \(p<`3stars'\)} \\"'
+		mata: pT->add_line("\multicolumn{`ncols'}{l}{\footnotesize sym" + "{" + "*" + "}" + "\(p<`1stars'\), \sym{**} \(p<`2stars'\), \sym{***} \(p<`3stars'\)} \\")
 	}
 	
 	mata: st_local("paren", pT->paren)
+	mata: st_local("used_paren", strofreal(pT->used_paren))
+	
 	mata: st_local("n_cols_tab", strofreal(pT->ncols))
 	
-	if "`paren'"!="" { // FLAG Robust currently unused - and include clustering
+	if `used_paren' | "`paren'"!="" { // FLAG Robust currently unused - and include clustering
 		if "`paren'"=="se" 						 	loc in_paren = "Standard errors in parentheses"
 		if "`paren'"=="t"							loc in_paren = "t statistics in parenthesis"
 		if "`paren'"=="p"							loc in_paren = "p-values in parenthesis"
-		mata: pT->add_line(`"\multicolumn{`ncols'}{l}{\footnotesize `in_paren'} \\\\"')
+		mata: pT->add_line(`"\multicolumn{`n_cols_tab'}{l}{\footnotesize `in_paren'} \\"')
 	}
 	
-	if `"`robust'"'!="" mata: pT->add_line(`"\multicolumn{`ncols'}{l}{\footnotesize Standard errors are HAC robust} \\\\"')
-	if `"`cluster'"'!="" mata: pT->add_line(`"\multicolumn{`ncols'}{l}{\footnotesize Standard errors are HAC robust and clustered on `cluster'} \\\\"')
+	if `"`robust'"'!=""  mata: pT->add_line(`"\multicolumn{`n_cols_tab'}{l}{\footnotesize Standard errors are HAC robust} \\"')
+	if `"`cluster'"'!="" mata: pT->add_line(`"\multicolumn{`n_cols_tab'}{l}{\footnotesize Standard errors are HAC robust and clustered on `cluster'} \\"')
 	
 	if `"`custom'"'!="" {
 		if strpos(`"`custom'"', `"""')==0 loc opt = `""`custom'""'
 		foreach custom_msg of local custom {
-		mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`custom_msg'}"')	
+		mata: pT->add_line(`"\multicolumn{`n_cols_tab'}{l}{`custom_msg'}"')	
+		}
 	}
 end
 
-cap prog drop tmp 
-prog tmp 
-	syntax, opt(string asis)
-	
-	if strpos(`"`opt'"', `"""')==0 loc opt = `""`opt'""'
-	foreach sentence in `opt' {
-		di `"`sentence'"'
-	}
-end
-
-
-tmp, opt("First quote" "Second quote")
-
-
-
-
-cap prog drop table_close
-prog table_close
-	syntax, name(namelist max=1) [paren stars robust]
+cap prog drop statex_close
+prog statex_close
+	syntax, [name(namelist max=1) paren stars robust]
 	
 	* Syntax
 	********
 	// Table is open
-	cap assert ${`name'__tab_open}==1
-	if _rc {
-		di as error `"Table `name' not open"'
-		exit 198
-	}
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
 	
 	/*
 	if "`notextprocessing'"=="" {
@@ -927,12 +929,57 @@ prog table_close
 	}
 	*/
 	
-	file write `name'__tab `"\hline\midrule"' _n
-	if "`paren'`stars'"!="" __table_add_footer, name(`name') `paren' `stars' `robust'
-	file write `name'__tab `"\end{tabular}"' _n
-	file write `name'__tab `"}"' _n
-	cap file close `name'__tab
-	global `name'__tab_open = 0
+	mata: pT->add_line(`"\hline\midrule"')
+	// FLAG: Add back after all options for __statex_add_footer is done
+	//if "`paren'`stars'"!="" __statex_add_footer, name(`name') `paren' `stars' `robust'
+	mata: pT->add_line(`"\end{tabular}"')
+	mata: pT->is_closed = 1
+end
+
+cap prog drop statex_write
+prog statex_write
+	syntax, [name(namelist max=1) replace] filename(string asis)
+	
+	* Syntax
+	********
+	
+	// If replace not specified, return error if it exists
+	if "`replace'"=="" {
+		if fileexists(`filename') {
+			di as error "File already exists"
+			exit 602
+		}
+	}
+	
+	// If replace exists: delete file if it exists
+	if "`replace'"!="" {
+		if fileexists(`filename') {
+			cap erase `filename'
+            if _rc {
+                di as error `"Tried to replace, but could not delete `filename'"'
+                exit _rc
+            }
+		}
+	}
+	
+	cap confirm new file `filename'
+	if _rc {
+		di as error `"Not a valid filename: `filename'"'
+		exit 603
+	}
+	
+	* Get Table object: 
+	
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	
+	* Write to file
+	****************
+	
+	mata: rc = pT->write_table("C:\Users\s16501\Documents\GitHub\Statex\text_table3.tex")
+	mata: st_local("rc", strofreal(rc))
+	
+	di "Error code: `rc'"
 end
 
 

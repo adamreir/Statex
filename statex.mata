@@ -23,6 +23,7 @@ class Table {
 	void add_line() 
 	void append_to_line()
 	void panel()
+	real scalar write_table()
 	string scalar pad_string()
 }
 
@@ -109,7 +110,33 @@ string scalar Table::pad_string(string scalar content, string scalar lcr) {
     
     return(padded)
 }
+
+real scalar Table::write_table(string scalar filename) {
+	
+	fh = _fopen(filename, "w")
+	if (fh < 0) {
+        return(0)
+    }
+	for (i = 1; i <= rows(content); i++) {
+		rc = _fput(fh, content[i, 1])
+		  if (rc < 0) {
+            // Try to close anyway
+            _fclose(fh)
+            return(0)
+        }
+	}
+	rc = _fclose(fh)
+	if (rc < 0) {
+        return(0)
+    }
+	
+	return(1)
+}
+
+
 end
+
+
 
 
 mata 
