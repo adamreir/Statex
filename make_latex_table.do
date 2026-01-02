@@ -3,8 +3,6 @@
 *********************************** New Table **********************************
 ********************************************************************************
 
-
-cap prog drop statex_new
 prog statex_new
 	syntax, ///
 		[name(namelist max=1)] ///
@@ -45,7 +43,6 @@ prog statex_new
 	mata: pT->add_line("\begin{tabular}{`coltypes'} \hline\midrule")
 end
 
-cap prog drop statex_list
 prog statex_list
 	syntax, [name(string)]
 	
@@ -55,12 +52,10 @@ prog statex_list
 end
 
 // FLAG: 
-cap prog drop statex_dir
 prog statex_dir
 	mata: statex.dir()
 end
 
-cap prog drop statex_row
 prog statex_row
 	syntax, ///
 		[name(namelist max=1)] ///
@@ -209,7 +204,6 @@ prog statex_row
 end
 
 
-cap prog drop statex_panel_header
 prog statex_panel_header
 	syntax, ///
 		[name(namelist max=1)] ///
@@ -235,8 +229,6 @@ prog statex_panel_header
 	mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`bold_start'Panel `panel': `text'`bold_end'} \\"')
 end
 
-
-cap prog drop statex_add_midrule
 prog statex_add_midrule
 	syntax, [name(namelist max=1)]
 
@@ -247,7 +239,6 @@ prog statex_add_midrule
 end
 
 // FLAG 
-cap prog drop table_from_data
 prog table_from_data
 	syntax varlist, [mat(namelist max=1) name(namelist max=1)]
 	
@@ -259,7 +250,6 @@ prog table_from_data
 
 end
 
-cap prog drop statex_from_mat 
 prog statex_from_mat
 	syntax, b(string asis) [name(string) rowlabels(string asis) titles(string asis) se(namelist max=1) p(namelist max=1)] //Flag add 
 	
@@ -435,35 +425,13 @@ prog statex_from_mat
 	
 end
 
-/*
-mat tmp = 1,2 \ 3,4
-mat list tmp
-
-statex_new, n_cols(3)
-
-set trace on 
-set tracedepth 1
-
-statex_from_mat, b(tmp, format(%3.2fc)) rowlabels(row1 row2 )
-statex_list
-
-tmp, b(name, format(%3.2fc))
-
-
-loc n = 1
-loc ++n
-di `n'
-*/
-
 // FLAG
-cap prog drop statex_diff_table
 prog statex_diff_table
 
 end
 
 // Done
-cap prog drop __table_est_extract
-prog __table_est_extract // Take ests stored in namelist, store in (new) frame __table_res, and label (if option `label')
+prog statex_extract_params // Take ests stored in namelist, store in (new) frame __table_res, and label (if option `label')
 	syntax namelist, [name(namelist max=1) label drop(string) keep(string) order(string)] // Pick out name and move to parent function
 	
 	//loc namelist = "reg1 reg2 reg4"
@@ -510,7 +478,7 @@ prog __table_est_extract // Take ests stored in namelist, store in (new) frame _
 	//loc namelist = "reg1 reg2"
 	loc suffix = 1
 	foreach est of local namelist {
-		__table_est_frame, est(`est') suffix(`suffix')  // Adds estimated params to frame
+		statex_est_frame, est(`est') suffix(`suffix')  // Adds estimated params to frame
 		loc ++suffix
 	}
 	frame __table_res: qui replace varlist = subinstr(varlist, "c.", " ", .)
@@ -560,8 +528,8 @@ prog __table_est_extract // Take ests stored in namelist, store in (new) frame _
 	frame __table_res: qui replace varlist = subinstr(varlist, "_", "\_", .)
 end
 
-cap prog drop __table_est_table
-prog __table_est_table
+
+prog statex_write_params
 	syntax, [name(string) stars(string)] n_cols(integer) b(string) se(string)
 	// Reads params from frame and writes to table. 
 	
@@ -623,24 +591,6 @@ prog __table_est_table
 	
 end
 
-/*
-cap prog drop tmp 
-prog tmp 
-	syntax namelist
-
-	if "`name'"=="" mata: _ = statex.get_current()
-	mata: pT = statex.get_table("`name'")
-	
-	loc n_res : list sizeof namelist
-	
-	
-	di "`n_cols'"
-end
-
-tmp reg1
-*/
-
-cap prog drop statex_add_est
 prog statex_add_est
 	syntax namelist, [name(namelist max=1)] label b(passthru) [se(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) longmidrule stars(passthru)]	
 	
@@ -696,11 +646,11 @@ prog statex_add_est
 	
 	// Move est. to frame
 	
-	__table_est_extract `namelist',  `label' name(`name') `drop' `keep' `order'
+	statex_extract_params `namelist',  `label' name(`name') `drop' `keep' `order'
 	
 	// export to latex file. 
 	loc n_cols : list sizeof namelist
-	__table_est_table, n_cols(`n_cols') name(`name') `b' `se' `stars'
+	statex_write_params, n_cols(`n_cols') name(`name') `b' `se' `stars'
 	
 	// Flag: Should look for these variables in `absorb' (or wherever they are stored), as well as the usual varlists. 
 	if `"`absorbed'"'!="" {
@@ -734,7 +684,6 @@ prog statex_add_est
 	}
 end
 
-cap prog drop statex_add_est_stats
 program statex_add_est_stats
 	syntax namelist, name(namelist max=1) [stats(namelist) format(string) labels(string)]
 	// Add regression statistics (N observations etc.)
@@ -799,8 +748,7 @@ end
 
 //statex_add_est_stats reg1 reg2 reg3, name(regtable) //format("%12.0fc" "%4.3fc") //stats(N r2 Q) 
 
-cap prog drop __table_est_frame
-prog __table_est_frame // Take est and place in (i.e. add to) frame
+prog statex_est_frame // Take est and place in (i.e. add to) frame
 	syntax, /*to(string)*/ est(string) suffix(string)
 	
 	//loc est = "reg1"
@@ -847,12 +795,10 @@ prog __table_est_frame // Take est and place in (i.e. add to) frame
 	
 end
 
-cap prog drop table_indicate 
-prog table_indicate
+prog statex_indicate
 end
 
-cap prog drop __statex_add_footer
-prog __statex_add_footer
+prog statex_add_footer
 	/// FLAG : add option to turn subnotes off (e.g. nostars nose etc.)
 	syntax, [name(namelist max=1) stars robust cluster(string asis) custom(string asis)]
 	
@@ -911,7 +857,7 @@ prog __statex_add_footer
 	}
 end
 
-cap prog drop statex_close
+
 prog statex_close
 	syntax, [name(namelist max=1) /stars robust cluster(passthru) custom(passthru)]
 	
@@ -931,12 +877,12 @@ prog statex_close
 	*/
 	
 	mata: pT->add_line(`"\hline\midrule"')
-	__statex_add_footer, name(`name') `stars' `robust' `cluster' `custom'
+	statex_add_footer, name(`name') `stars' `robust' `cluster' `custom'
 	mata: pT->add_line(`"\end{tabular}"')
 	mata: pT->is_closed = 1
 end
 
-cap prog drop statex_write
+
 prog statex_write
 	syntax, [name(namelist max=1) replace] filename(string asis)
 	

@@ -1,4 +1,27 @@
 mata: mata clear
+
+cap prog drop statex_new
+cap prog drop statex_list
+cap prog drop statex_dir
+cap prog drop statex_row
+cap prog drop statex_panel_header
+cap prog drop statex_add_midrule
+cap prog drop table_from_data
+cap prog drop statex_from_mat 
+cap prog drop statex_diff_table
+cap prog drop statex_extract_params
+cap prog drop statex_write_params
+
+cap prog drop statex_add_est
+cap prog drop statex_add_est_stats
+cap prog drop statex_est_frame // Same as statex_extract_params?
+cap prog drop statex_indicate 
+cap prog drop statex_add_footer
+
+cap prog drop statex_close
+cap prog drop statex_write
+
+
 do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 do "C:/Users/`=c(username)'/Documents/GitHub/statex/make_latex_table.do"
 
