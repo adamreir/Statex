@@ -31,7 +31,7 @@ void Table::init(string scalar _name, real scalar _ncols, string scalar _stars, 
 	name = _name
 	//filename = _filename
 	used_stars = 0
-	used_paren = 0
+	
 	ncols = _ncols
 	stars= _stars
 	paren = _paren
