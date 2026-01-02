@@ -24,11 +24,15 @@ set tracedepth 2
 
 statex_panel, text("A panel")
 statex_add_est est1 est2, label b(%3.2fc) shortmidrule //se(%3.2fc) 
+statex_panel, text("Another panel")
+statex_add_est est1 est2, label b(%3.2fc) shortmidrule //se(%3.2fc) 
 __statex_add_footer, robust
-statex_close
+statex_closem
 statex_list
 
-statex_write, filename("C:\Users\s16501\Documents\GitHub\Statex\text_table3.tex") replace
+//mata: pT->write_table("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test1.tex")
+
+statex_write, filename("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test1.tex") replace
 
 //mata: pT->write_table("C:\Users\s16501\Documents\GitHub\Statex\text_table3.tex")
 

@@ -220,7 +220,7 @@ prog statex_panel
 	********************
 	
 	if "`nobold'"=="" {
-		loc bold_start = `"\\textbf{"'
+		loc bold_start = `"\textbf{"'
 		loc bold_end   = `"}"'
 	}
 	
@@ -870,8 +870,9 @@ prog __statex_add_footer
 	* Add Footer
 	************
 	
-	statex_add_midrule, name("`name'")
+	//statex_add_midrule, name("`name'")
 	
+	mata: st_local("n_cols_tab", strofreal(pT->ncols))
 	mata: st_local("used_stars", strofreal(pT->used_stars))
 		
 	if `used_stars' | "`stars'"!="" {
@@ -881,16 +882,16 @@ prog __statex_add_footer
 		gettoken 2stars 3stars : stars
 		forv n = 1/3 {
 			di "`n'stars: ``n'stars'"
-			loc `n'stars = string(``n'stars', "%3.2fc")
+			loc `n'stars = string(``n'stars', "%4.3fc")
 		}
 		
-		mata: pT->add_line("\multicolumn{`ncols'}{l}{\footnotesize sym" + "{" + "*" + "}" + "\(p<`1stars'\), \sym{**} \(p<`2stars'\), \sym{***} \(p<`3stars'\)} \\")
+		
+		mata: pT->add_line("\multicolumn{`n_cols_tab'}{l}{\footnotesize \sym{*}\(p<`1stars'\), \sym{**} \(p<`2stars'\), \sym{***} \(p<`3stars'\)} \\")
+		//mata: pT->add_line("\multicolumn{`ncols'}{l}{\footnotesize \sym" + "{" + "*" + "}" + "\(p<`1stars'\), \sym{**} \(p<`2stars'\), \sym{***} \(p<`3stars'\)} \\")
 	}
 	
 	mata: st_local("paren", pT->paren)
 	mata: st_local("used_paren", strofreal(pT->used_paren))
-	
-	mata: st_local("n_cols_tab", strofreal(pT->ncols))
 	
 	if `used_paren' | "`paren'"!="" { // FLAG Robust currently unused - and include clustering
 		if "`paren'"=="se" 						 	loc in_paren = "Standard errors in parentheses"
@@ -912,7 +913,7 @@ end
 
 cap prog drop statex_close
 prog statex_close
-	syntax, [name(namelist max=1) paren stars robust]
+	syntax, [name(namelist max=1) /stars robust cluster(passthru) custom(passthru)]
 	
 	* Syntax
 	********
@@ -930,8 +931,7 @@ prog statex_close
 	*/
 	
 	mata: pT->add_line(`"\hline\midrule"')
-	// FLAG: Add back after all options for __statex_add_footer is done
-	//if "`paren'`stars'"!="" __statex_add_footer, name(`name') `paren' `stars' `robust'
+	__statex_add_footer, name(`name') `stars' `robust' `cluster' `custom'
 	mata: pT->add_line(`"\end{tabular}"')
 	mata: pT->is_closed = 1
 end
@@ -976,10 +976,14 @@ prog statex_write
 	* Write to file
 	****************
 	
-	mata: rc = pT->write_table("C:\Users\s16501\Documents\GitHub\Statex\text_table3.tex")
+	mata: rc = pT->write_table(`filename')
 	mata: st_local("rc", strofreal(rc))
 	
-	di "Error code: `rc'"
+	di "Return code: `rc'"
+	if `rc'==0 {
+		di as error "Stata (Mata) experienced an error when trying to write the table to file"
+		exit 198
+	}
 end
 
 
