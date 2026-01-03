@@ -1,31 +1,16 @@
+
 mata: mata clear
+discard
+adopath + "C:/Users/`=c(username)'/Documents/GitHub/Statex"
 
-cap prog drop statex_new
-cap prog drop statex_list
-cap prog drop statex_dir
-cap prog drop statex_row
-cap prog drop statex_panel_header
-cap prog drop statex_add_midrule
-cap prog drop table_from_data
-cap prog drop statex_from_mat 
-cap prog drop statex_diff_table
-cap prog drop statex_extract_params
-cap prog drop statex_write_params
+findfile statex.mata
+qui do "`r(fn)'"
 
-cap prog drop statex_add_est
-cap prog drop statex_add_est_stats
-cap prog drop statex_est_frame // Same as statex_extract_params?
-cap prog drop statex_indicate 
-cap prog drop statex_add_footer
+//do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
+//do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.ado"
 
-cap prog drop statex_close
-cap prog drop statex_write
+statex new, n_cols(3)
 
-
-do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
-do "C:/Users/`=c(username)'/Documents/GitHub/statex/make_latex_table.do"
-
-statex_new, n_cols(3)
 mata: pT = statex.get_table("Table1")
 
 clear
@@ -39,19 +24,19 @@ lab var x1 "X1"
 eststo est1: qui reg y x1 x2
 eststo est2: qui reg y x1 x2, r
 
-statex_row, row("abc" "def") blank //align(c c) multicolumn(1 1)
+statex row, row("abc" "def") blank //align(c c) multicolumn(1 1)
 
 //set trace on 
 set tracedepth 2
 
-statex_add_midrule
-statex_panel_header, text("A panel")
-statex_add_est est1 est2, label b(%3.2fc) //se(%3.2fc) 
-statex_add_midrule
-statex_panel_header, text("Another panel")
-statex_add_est est1 est2, label b(%3.2fc) longmidrule //se(%3.2fc) 
-statex_close, robust
-statex_list
+statex midrule
+statex panel, text("A panel")
+statex est est1 est2, label b(%3.2fc) //se(%3.2fc) 
+statex midrule
+statex panel, text("Another panel")
+statex est est1 est2, label b(%3.2fc) longmidrule //se(%3.2fc) 
+statex close, robust
+statex list
 
 //mata: pT->write_table("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test1.tex")
 

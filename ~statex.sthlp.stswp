@@ -24,7 +24,7 @@ Initiate, manage, and organize statex tables
 
 {p2colset 9 39 41 2}{...}
 {p2col :{helpb statex_manage:statex new}}Initialize a new table{p_end}
-{p2col :{helpb statex_manage:statex list}}List the content of a table{p_end}
+{p2col :{helpb statex_manage:statex list}}List the conte{p_end}
 {p2col :{helpb statex_manage:statex dir}}List all tables in memory{p_end}
 {p2col :{helpb statex_manage:statex change}}Change the current table{p_end}
 {p2col :{helpb statex_manage:statex drop}}Drop table{p_end}

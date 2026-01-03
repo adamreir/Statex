@@ -1,6 +1,33 @@
 
 ********************************************************************************
-*********************************** New Table **********************************
+***************************** Access point *************************************
+********************************************************************************
+
+
+cap prog drop statex
+prog statex
+	version 16
+	
+	gettoken subcmd 0 : 0, parse(" ,")
+	local subcmd = trim("`subcmd'")
+	
+	di "subcmd: |`subcmd'|"
+	if `"`subcmd'"'=="est" {
+		//
+	} 
+	else if `"`subcmd'"'=="sum" {
+		//
+	}
+	else {
+		di as error `"Unknown subcommand: `subcmd'"'
+		di "available subcommands: sum, est"
+		exit 198
+	}
+end
+
+
+********************************************************************************
+************************ Manage Statex Tables **********************************
 ********************************************************************************
 
 prog statex_new
@@ -55,6 +82,18 @@ end
 prog statex_dir
 	mata: statex.dir()
 end
+
+prog statex_change
+
+end
+
+prog statex_drop
+
+end
+
+********************************************************************************
+*********************************** Header / row *******************************
+********************************************************************************
 
 prog statex_row
 	syntax, ///
@@ -204,7 +243,7 @@ prog statex_row
 end
 
 
-prog statex_panel_header
+prog statex_panel
 	syntax, ///
 		[name(namelist max=1)] ///
 		text(string) ///
@@ -228,6 +267,11 @@ prog statex_panel_header
 	
 	mata: pT->add_line(`"\multicolumn{`ncols'}{l}{`bold_start'Panel `panel': `text'`bold_end'} \\"')
 end
+
+********************************************************************************
+***************************** Estimates or summary stats ***********************
+********************************************************************************
+
 
 prog statex_add_midrule
 	syntax, [name(namelist max=1)]
@@ -425,11 +469,6 @@ prog statex_from_mat
 	
 end
 
-// FLAG
-prog statex_diff_table
-
-end
-
 // Done
 prog statex_extract_params // Take ests stored in namelist, store in (new) frame __table_res, and label (if option `label')
 	syntax namelist, [name(namelist max=1) label drop(string) keep(string) order(string)] // Pick out name and move to parent function
@@ -527,7 +566,6 @@ prog statex_extract_params // Take ests stored in namelist, store in (new) frame
 	frame __table_res: qui replace varlist = subinstr(varlist, "#", " \#", .)
 	frame __table_res: qui replace varlist = subinstr(varlist, "_", "\_", .)
 end
-
 
 prog statex_write_params
 	syntax, [name(string) stars(string)] n_cols(integer) b(string) se(string)
@@ -796,7 +834,17 @@ prog statex_est_frame // Take est and place in (i.e. add to) frame
 end
 
 prog statex_indicate
+
 end
+
+// FLAG
+prog statex_diff_table
+
+end
+
+******
+*
+******
 
 prog statex_add_footer
 	/// FLAG : add option to turn subnotes off (e.g. nostars nose etc.)
@@ -931,5 +979,4 @@ prog statex_write
 		exit 198
 	}
 end
-
 

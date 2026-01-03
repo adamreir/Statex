@@ -138,23 +138,6 @@ end
 
 
 
-
-mata 
-mata drop func()
-void func(real scalar lcr) {
-	if (lcr==1) printf("left")
-	
-	if (lcr==2) {
-		printf("center")
-	}
-	if (lcr==3) {
-		printf("right")
-	}
-}
-func(1)
-end
-
-
 **************************
 * Global Statex Class Def*
 **************************
