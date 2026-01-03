@@ -411,18 +411,9 @@ prog statex_est_prepare
 			exit 198
 		}
 	}
-	
-	cap frame drop __table_res
-	frame create __table_res
-	frame __table_res: qui g varlist = ""
-	global table_varlist_all = "" //??
-	
-	//loc namelist = "reg1 reg2"
-	loc suffix = 1
-	foreach est of local namelist {
-		statex_est_extract, est(`est') suffix(`suffix')  // Adds estimated params to frame
-		loc ++suffix
-	}
+
+	statex_est_extract `namelist' //, est(`est') suffix(`suffix')  // Adds estimated params to frame
+
 	frame __table_res: qui replace varlist = subinstr(varlist, "c.", " ", .)
 	
 	if `"`drop'"'!="" {
@@ -471,57 +462,162 @@ prog statex_est_prepare
 end
 
 prog statex_est_extract // Take est and place in (i.e. add to) frame
-	syntax, /*to(string)*/ est(string) suffix(string)
+	syntax namelist, [indicate(string asis)] //, est(string) suffix(string)
 	
-	//loc est = "reg1"
+	// parse indicate option
+	local cpos = strpos(`"`indicate'"', ",")
+	if `cpos'==0 local indicate_var_lab `"`indicate'"'
+	else {
+		local indicate_var_lab = strtrim(substr(`"`indicate'"', 1, `cpos' - 1))
+		local indicate_options = strtrim(substr(`"`indicate'"', `cpos' + 1, .))	
+	}
+	loc 0 , `indicate_options'
+	syntax , [indicators(string asis)]
 	
-	frame __table_res {
-		qui g double b`suffix' = .
-		qui g double se`suffix' = .
-		qui g double t`suffix' = .
-		qui g double p`suffix' = .
+	loc n_indicators     = wordcount(`"`indicators'"')
+	
+	cap assert `n_indicators'<=2 
+	if _rc {
+		di as error "Cannot provide more than two indicators (only used to display 'yes' and 'no')."
+		exit 198
 	}
 	
-	qui estimates restore `est'
-	mat b = e(b)
-	mat V = e(V)
+	// Prepare frames
 	
-	loc varnames : colnames b
+	cap frame drop __table_res
+	frame create __table_res
+	frame __table_res: qui g strL varlist = ""
 	
-	cap mat drop `to'
-	loc n = colsof(b)
-	forv i = 1/`n' {
-	//loc i = 1
-		loc varname : word `i' of `varnames'
-		loc clean_varname = subinstr("`varname'", "c.", " ", .)
-		loc clean_varname = subinstr("`clean_varname'", "#", " ",.)
-		loc b = b[1,`i']
-		loc se = sqrt(V[`i', `i'])
-		loc t = `b'/`se'
-		loc p = 2 * ttail(e(df_r), abs(`t'))
-		
-		frame __table_res {
-			if substr("`varname'",1,2)!="o."{ //loc varname = substr("`varname'",3,.)
-				qui count if varlist == "`varname'"
-				if r(N)==0 {
-					qui set obs `=_N+1'
-					qui replace varlist = "`varname'" if _n==_N
-				}
-				qui replace b`suffix'  = `b'  if varlist=="`varname'"
-				qui replace se`suffix' = `se' if varlist=="`varname'"
-				qui replace t`suffix'  = `t'  if varlist=="`varname'"
-				qui replace p`suffix'  = `p'  if varlist=="`varname'"
-			}
+	cap frame drop __table_indicate
+    frame create __table_indicate
+    frame __table_indicate: qui gen strL varlist = ""
+	frame __table_indicate: qui gen strL label = ""
+	
+	foreach var_lab of local indicate_var_lab {
+		//gettoken lab var : var_lab, parse("=")
+		//loc var = substr(`"`var'"', 2, .)
+		loc epos = strpos(`"`var_lab'"', "=")
+		if `epos'==0 {
+			loc lab	= `"`var_lab'"'
+			loc var = `"`var_lab'"'
+		}
+		else {
+			loc lab = strtrim(substr(`"`var_lab'"', 1, `epos' - 1))
+			loc var = strtrim(substr(`"`var_lab'"', `epos' + 1,.))
+		}
+		di `"`var_lab': `var' - `lab'"'
+		frame __table_indicate {
+			set obs `=_N+1'
+			replace varlist = "`var'" if _n==_N
+			replace label = "`lab'" if _n==_N
 		}
 	}
 	
+	loc suffix = 1
+	foreach est of local namelist {
+		
+		frame __table_res {
+			qui g double b`suffix' = .
+			qui g double se`suffix' = .
+			qui g double t`suffix' = .
+			qui g double p`suffix' = .
+		}
+		
+		frame __table_indicate: g fe`suffix' = 0
+		
+		qui estimates restore `est'
+		mat b = e(b)
+		mat V = e(V)
+		loc absorbed = "`e(absvars)'"
+		
+		* Parameters
+		************
+		
+		loc varnames : colnames b
+		
+		cap mat drop `to'
+		loc n = colsof(b)
+		forv i = 1/`n' {
+		//loc i = 1
+			loc varname : word `i' of `varnames'
+			if substr("`varname'",1,2)!="o." {
+				
+				// Check if `varname' is in `indicate'?
+                local in_indicate = 0
+				di "			INDICATE"
+				frame __table_indicate: qui levelsof varlist, local(indicated)
+				//loc indicated : list clean indicated
+				di `"INDIC:`indicated'"'
+				foreach pat of local indicated {
+					if strmatch("`varname'", `"`pat'"') local in_indicate = 1
+					di `"			compare |`pat'| with |`varname'"'
+					di strmatch("`varname'", `"`pat'"')
+				}
+				
+				if `in_indicate'==0 { // Include parameter
+					loc clean_varname = subinstr("`varname'", "c.", " ", .)
+					loc clean_varname = subinstr("`clean_varname'", "#", " ",.)
+					loc b = b[1,`i']
+					loc se = sqrt(V[`i', `i'])
+					loc t = `b'/`se'
+					loc p = 2 * ttail(e(df_r), abs(`t'))
+					
+					frame __table_res {
+							qui count if varlist == "`varname'"
+							if r(N)==0 {
+								qui set obs `=_N+1'
+								qui replace varlist = "`varname'" if _n==_N
+							}
+							qui replace b`suffix'  = `b'  if varlist=="`varname'"
+							qui replace se`suffix' = `se' if varlist=="`varname'"
+							qui replace t`suffix'  = `t'  if varlist=="`varname'"
+							qui replace p`suffix'  = `p'  if varlist=="`varname'"
+					}
+				}
+				else { // Include indicator
+					frame __table_indicate: replace fe`suffix'=1 if strmatch("`varname'", varlist)
+				}
+			}
+		}
+		
+		* Absorbed FEs
+		**************
+		
+		foreach abs of local absorbed {
+			frame __table_indicate: qui count if varlist ==`"`abs'"'
+			if r(N)==0 {
+				frame __table_indicate {
+					qui set obs `=_N'
+					qui replace varlist = "`abs'" if _n==_N
+				}
+			}
+			frame __table_indicate: replace fe`suffix' = 1 if varlist == "`abs'"
+		}
+		
+		loc suffix = `suffix'+1
+	}
+	
+	
+	
+	// Look for indicator variables not found in estimation results
+	frame __table_indicate: egen rowsum = rowtotal(fe*)
+	frame __table_indicate: qui count if rowsum==0
+	if r(N)>0 {
+		frame __table_indicate: qui levelsof varlist if rowsum==0, local(notfound)
+		loc notfound : list clean notfound
+		//frame drop __table_res
+		//frame drop __table_indicate
+		di as error `"Cannot indicate variables. Not found in estimation results: `notfound'"'
+		exit 111
+	}
+	else { 
+		frame __table_indicate: drop rowsum
+	}
 end
 
 prog statex_est_write
 	syntax, [name(string) stars(string)] n_cols(integer) b(string) se(string)
 	// Reads params from frame and writes to table. 
-	
-	
 	
 	mata: pT = statex.get_table("`name'")
 	frame __table_res: loc n_vars = _N

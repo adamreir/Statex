@@ -18,16 +18,28 @@ set obs 20000
 g x1 = rnormal()
 g x2 = rnormal()
 g y = x1 + x2 + rnormal()
+g year = floor(runiform()*5+2000)
 
 lab var x1 "X1"
 
-eststo est1: qui reg y x1 x2
-eststo est2: qui reg y x1 x2, r
+eststo est1: qui reg y x1 x2 i.year
+eststo est2: qui reghdfe y x1, absorb(i.year#c.x2) 
+
+//set trace on
+set tracedepth 2
+
+
+statex est_extract est1 est2, indicate("Xs=x?", indicators("yes" "no"))
+frame __table_res: li
+frame __table_indicate: li
+
+
+
 
 statex row, row("abc" "def") blank //align(c c) multicolumn(1 1)
 
-//set trace on 
-set tracedepth 2
+set trace on 
+set tracedepth 3
 
 statex midrule
 statex panel, text("A panel")
