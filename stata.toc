@@ -1,0 +1,2 @@
+v 1
+p statex Statex: a flexible package that streamlines the process of generating clean, publication-ready LaTeX tables.

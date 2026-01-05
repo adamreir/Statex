@@ -1,0 +1,10 @@
+v 1
+d Statex: a flexible package that streamlines the process of generating clean, publication-ready LaTeX tables.
+d Adam Reiremo
+f statex.ado
+f statex.mata
+f statex.sthlp
+f statex_header.sthlp
+f statex_manage.sthlp
+f statex_other.sthlp
+f statex_stats.sthlp
