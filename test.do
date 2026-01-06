@@ -9,9 +9,11 @@ qui do "`r(fn)'"
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.ado"
 
-statex new, n_cols(3)
+statex new, n_cols(3) paren("ci")
 
 mata: pT = statex.get_table("Table1")
+
+mata: pT->paren
 
 clear
 set obs 20000
@@ -22,31 +24,29 @@ g year = floor(runiform()*5+2000)
 
 lab var x1 "X1"
 
-eststo est1: qui reg y x1 x2 i.year
-eststo est2: qui reghdfe y x1, absorb(i.year#c.x2) 
-
 //set trace on
 set tracedepth 2
 
+eststo est1: qui reg     y x1 x2 i.year
+eststo est2: qui reghdfe y x1, absorb(i.year) 
 
-statex est_extract est1 est2, indicate("Xs=x?", indicators("yes" "no"))
-frame __table_res: li
-frame __table_indicate: li
+//statex est_extract est1 est2, indicate("Xs=x?", indicators("yes" "no"))
+//frame __table_res: li
+//frame __table_indicate: li
+
+//statex row, row("abc" "def") //blank //align(c c) multicolumn(1 1)
 
 
 
-
-statex row, row("abc" "def") blank //align(c c) multicolumn(1 1)
-
-set trace on 
-set tracedepth 3
+//set trace on 
+set tracedepth 4
 
 statex midrule
 statex panel, text("A panel")
-statex est est1 est2, label b(%3.2fc) //se(%3.2fc) 
+statex est est1 est2, label b(%10.9fc) paren(none)  
 statex midrule
 statex panel, text("Another panel")
-statex est est1 est2, label b(%3.2fc) longmidrule //se(%3.2fc) 
+statex est est1 est2, label b(%3.2fc) longmidrule indicate("Year FE=*year") noheader //se(%3.2fc) 
 statex close, robust
 statex list
 

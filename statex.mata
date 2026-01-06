@@ -18,6 +18,7 @@ class Table {
 	real scalar cell_width
 	real scalar cell_overflow
 	real scalar is_closed
+	real scalar ci_level
 	void init()
 	void li()
 	void add_line() 
@@ -27,7 +28,7 @@ class Table {
 	string scalar pad_string()
 }
 
-void Table::init(string scalar _name, real scalar _ncols, string scalar _stars, string scalar _paren, real scalar _cell_width) {
+void Table::init(string scalar _name, real scalar _ncols, string scalar _stars, string scalar _paren, real scalar _cell_width, real scalar _ci_level) {
 	content = J(0, 1, "")
 	name = _name
 	//filename = _filename
@@ -40,6 +41,7 @@ void Table::init(string scalar _name, real scalar _ncols, string scalar _stars, 
 	panel_counter = 65
 	is_closed = 0
 	cell_overflow = 0
+	ci_level = _ci_level
 }
 
 void Table::li() {
@@ -174,12 +176,12 @@ void Statex::init() {
 	tables = J(0,1,NULL)
 }
 
-pointer scalar Statex::add_table(string scalar name, real scalar ncols, string scalar stars, string scalar paren, cell_width) { // Add Tables
+pointer scalar Statex::add_table(string scalar name, real scalar ncols, string scalar stars, string scalar paren, real scalar cell_width, real scalar ci_level) { // Add Tables
 	class Table scalar T
 	confirm_noexist(name)
 	
 	T = Table()
-	T.init(name, ncols, stars, paren, cell_width)
+	T.init(name, ncols, stars, paren, cell_width, ci_level)
 	tables = tables \ &T
 	current = name
 	

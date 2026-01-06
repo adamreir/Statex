@@ -41,7 +41,7 @@ prog statex_new
 	syntax, ///
 		[name(namelist max=1)] ///
 		[coltypes(string)] n_cols(integer) ///
-		[stars(numlist descending min=3 max=3) t se p ci none replace] ///
+		[stars(numlist descending min=3 max=3) ci_level(real 95) paren(string) replace] ///
 		[width(integer 20)]
 	
 	* Parse
@@ -53,15 +53,22 @@ prog statex_new
 		exit 198
 	}
 	
-	cap assert inlist("`t'`se'`p'`ci'`none'", "", "t", "se", "p", "ci", "none")
+	cap assert inlist("`paren'", "", "t", "se", "p", "ci", "none")
 	if _rc {
-		di as error "Can at most one of the following: 't', 'se', 'p', 'ci', 'none'. Received invalid or multiple." 
+		di as error `"Paren must be one of "t", "se", "p", "ci", or "none". Received `paren'."' 
+		exit 198
+	}
+	
+	cap assert inrange(`ci_level', 0, 100)
+	if _rc {
+		di as error `"Option ci_level must be between 0 and 100. Received `ci_level'"'
 		exit 198
 	}
 	
 	// Default options: 
 	if "`stars'"=="" loc stars = ".05 .01 .001"	
-	if "`t'`se'`p'"=="" 	loc se = "se"
+	if "`paren'"=="" loc paren = "se"
+	//if "`ci_level'"=="" loc ci_level = "95"
 	if "`coltypes'"=="" {
 		loc coltypes = "l"
 		forv n = 1/`=`n_cols'-1' {
@@ -72,7 +79,7 @@ prog statex_new
 	* Save Meta Information
 	***********************
 	if "`name'"=="" mata: statex.get_auto_newname() // Get auto name if name is unspecified. 
-	mata: pT = statex.add_table("`name'", `n_cols', "`stars'", "`t'`se'`p'", `width')
+	mata: pT = statex.add_table("`name'", `n_cols', "`stars'", "`paren'", `width', `ci_level')
 	mata: pT->add_line("\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}")
 	mata: pT->add_line("\begin{tabular}{`coltypes'} \hline\midrule")
 end
@@ -105,7 +112,7 @@ end
 prog statex_row
 	syntax, ///
 		[name(namelist max=1)] ///
-		row(string asis) [multicolumn(numlist integer min=1) blank align(string) underline(string asis) bold]
+		row(string asis) [multicolumn(numlist integer min=1) noblank align(string) underline(string asis) bold]
 	
 	* Name
 	******
@@ -115,7 +122,7 @@ prog statex_row
 	
 	* Parse
 	*******
-	loc blank = "`blank'"!=""
+	loc blank = "`noblank'"==""
 	loc has_multicolumn = `"`multicolumn'"'!=""
 	
 	// If not multicolumn: n in row same as columns in table
@@ -283,7 +290,8 @@ end
 ***********
 
 prog statex_est
-	syntax namelist, [name(namelist max=1)] label b(passthru) [se(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) longmidrule stars(passthru)]	
+	syntax namelist, [name(namelist max=1)]  label [b(passthru) paren(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) longmidrule stars(passthru)] ///
+	[indicate(passthru)] [noheader]
 	
 	* Syntax
 	********
@@ -306,9 +314,10 @@ prog statex_est
 	}
 	
 	// Default formats [FLAG: se should be multiple options? se, t or p?]
-	if `"`se'"'=="" loc se = "se(%4.3fc)"
+	if `"`b'"' =="" 	loc b  =  "b(%4.3fc)"
+	if `"`paren'"'=="" 	loc paren = "paren(%4.3fc)"
 	
-	if "`se'"!="se(none)" 	mata: pT->used_paren = 1
+	if "`paren'"!="paren(none)" 	mata: pT->used_paren = 1
 	if "`stars'"!="none"	mata: pT->used_stars = 1
 	
 	// Check that namelist contains res that exists
@@ -330,18 +339,34 @@ prog statex_est
 		exit 198
 	}
 	
-	// FLAG: Check that user did not provide both keep and order?
-	
 	* Write table
 	*************
 	
+	if "`header'"=="" {
+		statex_est_header `namelist', name(`name') `label' `bold'
+		statex_midrule, name("`name'")
+	}
+	
+	cap frame drop __table_res
+	frame create __table_res
+	frame __table_res: qui g strL varlist = ""
+	
+	cap frame drop __table_indicate
+    frame create __table_indicate
+    frame __table_indicate: qui gen strL varlist = ""
+	frame __table_indicate: qui gen strL label = ""
+	
+	/*
+	tempname estframe indframe
+	*/
+	
 	// Move est. to frame
 	
-	statex_est_prepare `namelist',  `label' name(`name') `drop' `keep' `order'
+	statex_est_prepare `namelist',  `label' name(`name') `drop' `keep' `order' estframe(__table_res) indframe(__table_indicate) `indicate'
 	
 	// export to latex file. 
 	loc n_cols : list sizeof namelist
-	statex_est_write, n_cols(`n_cols') name(`name') `b' `se' `stars'
+	statex_est_write, n_cols(`n_cols') name(`name') `b' `paren' `stars' estframe(__table_res) indframe(__table_indicate)
 	
 	// Flag: Should look for these variables in `absorb' (or wherever they are stored), as well as the usual varlists. 
 	if `"`absorbed'"'!="" {
@@ -376,7 +401,7 @@ prog statex_est
 end
 
 prog statex_est_prepare 
-	syntax namelist, [name(namelist max=1) label drop(string) keep(string) order(string)] // Pick out name and move to parent function
+	syntax namelist, [name(namelist max=1) label drop(string) keep(string) order(string)] estframe(namelist max=1) indframe(namelist max=1) [indicate(passthru)] // Pick out name and move to parent function
 	// Take ests stored in namelist, store in (new) frame __table_res, label (if option `label'), keep, order etc.
 	
 	loc label = "`label'"!=""
@@ -412,58 +437,60 @@ prog statex_est_prepare
 		}
 	}
 
-	statex_est_extract `namelist' //, est(`est') suffix(`suffix')  // Adds estimated params to frame
+	mata: st_local("ci_level", strofreal(pT->ci_level))
+	statex_est_extract `namelist', ci_level(`ci_level') estframe(`estframe') indframe(`indframe') `indicate' // Adds estimated params to frame
 
 	frame __table_res: qui replace varlist = subinstr(varlist, "c.", " ", .)
 	
 	if `"`drop'"'!="" {
 		foreach token of local drop {
-			frame __table_res: qui drop if strmatch(varlist, `"`token'"')
+			frame `estframe': qui drop if strmatch(varlist, `"`token'"')
 			// Flag: Check if anything is dropped by first creating a dropped variable, counting, asserting, and then continue. 
 		}
 	}
 	if `"`keep'"'!="" {
-		frame __table_res: qui g keep = 0
+		frame `estframe': qui g keep = 0
 		loc keep = "ujive_*"
 		foreach token of local keep {
-			frame __table_res: qui replace keep = 1 if strmatch(varlist, `"`token'"')
+			frame `: qui replace keep = 1 if strmatch(varlist, `"`token'"')
 		}
-		frame __table_res: qui keep if keep
-		frame __table_res: drop keep
+		frame `estframe': qui keep if keep
+		frame `estframe': drop keep
 	}
 	
 	if `"`order'"'!="" {
-		frame __table_res: qui g order = .
-		frame __table_res: qui g init_order = _n
+		frame `estframe': qui g order = .
+		frame `estframe': qui g init_order = _n
 		loc current_order = 1
 		foreach token of local order {
-			frame __table_res: qui replace order = `current_order' if strmatch(varlist, `"`token'"')
+			frame `estframe': qui replace order = `current_order' if strmatch(varlist, `"`token'"')
 			loc current_order = `current_order' + 1
 		}
-		frame __table_res: sort order init_order
-		frame __table_res: drop order init_order
+		frame `estframe': sort order init_order
+		frame `estframe': drop order init_order
 	}
 	
 	
-	if `label' {	
-		frame __table_res: qui levelsof varlist, local(varlist)
+	if `label' {
+		frame `estframe': qui levelsof varlist, local(varlist)
 		loc varlist : list clean varlist
 		foreach v of local varlist {
 			cap loc lab : variable label `v'
 			if _rc 	  			loc lab = ""
-			if "`lab'"!="" frame __table_res: qui replace varlist = subinstr(varlist, "`v'", "`lab'", .)
+			if "`lab'"!="" frame `estframe': qui replace varlist = subinstr(varlist, "`v'", "`lab'", .)
 		}
-		frame __table_res: qui replace varlist = subinstr(varlist, "_cons", "Constant", .)
+		frame `estframe': qui replace varlist = subinstr(varlist, "_cons", "Constant", .)
 	}
 	
 	// Escape characters (FLAG: not complete)
-	frame __table_res: qui replace varlist = subinstr(varlist, "#", " \#", .)
-	frame __table_res: qui replace varlist = subinstr(varlist, "_", "\_", .)
+	frame `estframe': qui replace varlist = subinstr(varlist, "#", " \#", .)
+	frame `estframe': qui replace varlist = subinstr(varlist, "_", "\_", .)
 end
 
 prog statex_est_extract // Take est and place in (i.e. add to) frame
-	syntax namelist, [indicate(string asis)] //, est(string) suffix(string)
+	syntax namelist, ci_level(numlist max=1) [indicate(string asis)] estframe(string asis) indframe(string asis) //, est(string) suffix(string)
 	
+	// Consider changing this to a mata matrix for Stata users with limited number of columns. 
 	// parse indicate option
 	local cpos = strpos(`"`indicate'"', ",")
 	if `cpos'==0 local indicate_var_lab `"`indicate'"'
@@ -482,17 +509,6 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		exit 198
 	}
 	
-	// Prepare frames
-	
-	cap frame drop __table_res
-	frame create __table_res
-	frame __table_res: qui g strL varlist = ""
-	
-	cap frame drop __table_indicate
-    frame create __table_indicate
-    frame __table_indicate: qui gen strL varlist = ""
-	frame __table_indicate: qui gen strL label = ""
-	
 	foreach var_lab of local indicate_var_lab {
 		//gettoken lab var : var_lab, parse("=")
 		//loc var = substr(`"`var'"', 2, .)
@@ -506,26 +522,30 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 			loc var = strtrim(substr(`"`var_lab'"', `epos' + 1,.))
 		}
 		di `"`var_lab': `var' - `lab'"'
-		frame __table_indicate {
+		di "`indframe'"
+		frame `indframe' {
 			set obs `=_N+1'
 			replace varlist = "`var'" if _n==_N
 			replace label = "`lab'" if _n==_N
 		}
 	}
 	
-	loc suffix = 1
+	loc column = 1
 	foreach est of local namelist {
 		
-		frame __table_res {
-			qui g double b`suffix' = .
-			qui g double se`suffix' = .
-			qui g double t`suffix' = .
-			qui g double p`suffix' = .
+		frame `estframe' {
+			qui g double b`column' = .
+			qui g double se`column' = .
+			qui g double t`column' = .
+			qui g double p`column' = .
+			qui g double ci_l`column' = .
+			qui g double ci_u`column' = .
 		}
 		
-		frame __table_indicate: g fe`suffix' = 0
+		frame `indframe': g fe`column' = 0
 		
 		qui estimates restore `est'
+		loc df_r = e(df_r)
 		mat b = e(b)
 		mat V = e(V)
 		loc absorbed = "`e(absvars)'"
@@ -538,20 +558,17 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		cap mat drop `to'
 		loc n = colsof(b)
 		forv i = 1/`n' {
-		//loc i = 1
 			loc varname : word `i' of `varnames'
 			if substr("`varname'",1,2)!="o." {
 				
 				// Check if `varname' is in `indicate'?
                 local in_indicate = 0
-				di "			INDICATE"
-				frame __table_indicate: qui levelsof varlist, local(indicated)
+				frame `indframe': qui levelsof varlist, local(indicated)
 				//loc indicated : list clean indicated
-				di `"INDIC:`indicated'"'
 				foreach pat of local indicated {
 					if strmatch("`varname'", `"`pat'"') local in_indicate = 1
-					di `"			compare |`pat'| with |`varname'"'
-					di strmatch("`varname'", `"`pat'"')
+					//di `"			compare |`pat'| with |`varname'"'
+					//di strmatch("`varname'", `"`pat'"')
 				}
 				
 				if `in_indicate'==0 { // Include parameter
@@ -560,50 +577,65 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 					loc b = b[1,`i']
 					loc se = sqrt(V[`i', `i'])
 					loc t = `b'/`se'
-					loc p = 2 * ttail(e(df_r), abs(`t'))
 					
-					frame __table_res {
+					// Use critical values from t-statistic unless there are many dfs to calculate p-values and CIs (following estout convention)
+					loc df_max = 2e17
+					loc level_dec = (100-`ci_level')/(2*100)
+					if !mi(`df_r') & `df_r'<=`df_max' { // t
+						loc p = 2 * ttail(`df_r', abs(`t'))
+						loc crit = invttail(`df_r', `level_dec')
+					}
+					else { // norm
+						loc p = 2 * normal(-abs(`t'))
+						loc crit = invnormal(`level_dec')
+					}
+					
+					loc ci_l = `b' - `crit'*`se'
+					loc ci_u = `b' + `crit'*`se'
+				
+					frame `estframe' {
 							qui count if varlist == "`varname'"
 							if r(N)==0 {
 								qui set obs `=_N+1'
 								qui replace varlist = "`varname'" if _n==_N
 							}
-							qui replace b`suffix'  = `b'  if varlist=="`varname'"
-							qui replace se`suffix' = `se' if varlist=="`varname'"
-							qui replace t`suffix'  = `t'  if varlist=="`varname'"
-							qui replace p`suffix'  = `p'  if varlist=="`varname'"
+							qui replace b`column'  = `b'  if varlist=="`varname'"
+							qui replace se`column' = `se' if varlist=="`varname'"
+							qui replace t`column'  = `t'  if varlist=="`varname'"
+							qui replace p`column'  = `p'  if varlist=="`varname'"
+							qui replace ci_l`column' = `ci_l' if varlist=="`varname'"
+							qui replace ci_u`column' = `ci_u' if varlist=="`varname'"
 					}
 				}
 				else { // Include indicator
-					frame __table_indicate: replace fe`suffix'=1 if strmatch("`varname'", varlist)
+					frame `indframe': replace fe`column'=1 if strmatch("`varname'", varlist)
 				}
 			}
 		}
 		
 		* Absorbed FEs
 		**************
-		
 		foreach abs of local absorbed {
-			frame __table_indicate: qui count if varlist ==`"`abs'"'
-			if r(N)==0 {
-				frame __table_indicate {
-					qui set obs `=_N'
+			frame `indframe' {
+				qui count if strmatch(`"`abs'"', varlist)
+				if r(N)==0 {
+					qui set obs `=_N+1'
 					qui replace varlist = "`abs'" if _n==_N
+					qui replace label = "`abs'" if _n==_N
 				}
+				qui replace fe`column' = 1 if strmatch(`"`abs'"', varlist)
 			}
-			frame __table_indicate: replace fe`suffix' = 1 if varlist == "`abs'"
 		}
-		
-		loc suffix = `suffix'+1
+		loc column = `column'+1
 	}
 	
 	
 	
 	// Look for indicator variables not found in estimation results
-	frame __table_indicate: egen rowsum = rowtotal(fe*)
-	frame __table_indicate: qui count if rowsum==0
+	frame `indframe': egen rowsum = rowtotal(fe*)
+	frame `indframe': qui count if rowsum==0
 	if r(N)>0 {
-		frame __table_indicate: qui levelsof varlist if rowsum==0, local(notfound)
+		frame `indframe': qui levelsof varlist if rowsum==0, local(notfound)
 		loc notfound : list clean notfound
 		//frame drop __table_res
 		//frame drop __table_indicate
@@ -611,20 +643,51 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		exit 111
 	}
 	else { 
-		frame __table_indicate: drop rowsum
+		frame `indframe': drop rowsum
 	}
 end
 
+// FLAG: add options (bold, label). Also add group to group yvars (with cmidrule)
+prog statex_est_header
+	syntax namelist, [name(string) bold label]
+	
+	* Syntax
+	********
+	if "`name'"=="" mata: _ = statex.get_current()
+	//mata: pT = statex.get_table("`name'")
+	//mata: st_local("ncols_statex", strofreal(pT->ncols))
+	
+	* Write 
+	********
+		
+	foreach est of local namelist {
+		qui estimates restore `est'
+		loc y `e(depvar)'
+		if "`label'"!="" 	loc ylab : variable label `y'
+		if "`ylab'"==""		loc ylab = "`y'"
+		loc yrow = `"`yrow' "`ylab'""'
+		loc align = "`align' c"
+		loc multicolumn = "`multicolumn' 1"
+	}
+	
+	di `"statex row, row(`yrow') `bold' align(`align') name(`name') multicolumn(`multicolumn')"'
+	statex row, row(`yrow') `bold' align(`align') name(`name') multicolumn(`multicolumn')
+	
+end
+
+
+
 prog statex_est_write
-	syntax, [name(string) stars(string)] n_cols(integer) b(string) se(string)
+	syntax, name(string) [stars(string)] n_cols(integer) b(string) paren(string) estframe(string asis) indframe(string asis) //se(string)
 	// Reads params from frame and writes to table. 
 	
 	mata: pT = statex.get_table("`name'")
-	frame __table_res: loc n_vars = _N
+	frame `estframe': loc n_vars = _N
 	mata: pT->add_line(`""')
 	
+	// Write point estimates
 	forv row_i = 1/`n_vars' {
-		frame __table_res: loc var = varlist[`row_i']
+		frame `estframe': loc var = varlist[`row_i']
 		mata: pT->append_to_line(`"`var'"', 1, "left")
 		
 		// beta/stars
@@ -633,11 +696,11 @@ prog statex_est_write
 		gettoken 2star 3star : starlist
 		
 		forv col_i = 1/`n_cols' {	
-			frame __table_res: loc __b = b`col_i'[`row_i']
+			frame `estframe': loc __b = b`col_i'[`row_i']
 			loc __b = strofreal(`__b', "`b'")
 			
 			if "`stars'"!="none" {
-				frame __table_res: loc __p = p`col_i'[`row_i']
+				frame `estframe': loc __p = p`col_i'[`row_i']
 				if 		`__p'<`3star' loc __stars = `"\sym{***}"'
 				else if `__p'<`2star' loc __stars = `"\sym{**}"'
 				else if `__p'<`1star' loc __stars = `"\sym{*}"'
@@ -646,22 +709,35 @@ prog statex_est_write
 			
 			mata pT->append_to_line(`"&"', 0, "no")
 			if `__b'!=.		mata pT->append_to_line(`"`__b'`__stars'"', 1, "center")
+			else			mata pT->append_to_line(`""', 1, "center")
 		}
 		mata: pT->append_to_line(`"\\ "', 0, "no")
 		
-		// se
-		if "`se'"!="none" {
+		// parenthesis
+		if "`paren'"!="none" {
 			
+			mata: st_local("in_paren", pT->paren)
 			mata: pT->add_line(`""')
 			mata pT->append_to_line("", 1, "left")
 			
 			forv col_i = 1/`n_cols' {			
-				frame __table_res: loc __se = se`col_i'[`row_i']
-				loc   __se = strofreal(`__se', "`se'")
-				frame __table_res: loc __p = p`col_i'[`row_i']
+				if "`in_paren'"!="ci" {
+					frame `estframe': loc paren_content = `in_paren'`col_i'[`row_i']
+					loc paren_content = strofreal(`paren_content', "`paren'")
+					loc has_paren_content = !mi(`paren_content')
+				}
+				else {
+					frame `estframe': loc ci_l = ci_l`col_i'[`row_i']
+					frame `estframe': loc ci_u = ci_u`col_i'[`row_i']
+					loc ci_l = strofreal(`ci_l', "`paren'")
+					loc ci_u = strofreal(`ci_u', "`paren'")
+					loc paren_content = "`ci_l', `ci_u'"
+					loc has_paren_content = !mi(`ci_l') & !mi(`ci_u')
+				}
 				
 				mata pT->append_to_line(`"&"', 0, "no")
-				if `__se'!=. 	mata pT->append_to_line(`"(`__se')"', 1, "center")
+				if `has_paren_content' 	mata pT->append_to_line(`"(`paren_content')"', 1, "center")
+				else 					mata pT->append_to_line(`""', 1, "center")
 			}
 			
 			mata: pT->append_to_line(`"\\"', 0, "no")
@@ -673,6 +749,22 @@ prog statex_est_write
 		//else 				 mata: pT->add_line(`""')
 	}
 	
+	// Write indicators
+	frame `indframe': loc n_indics = _N
+	
+	forv row_i = 1/`n_indics' {
+		frame `indframe': loc var = label[`row_i']
+		mata: pT->add_line(`""')
+		mata: pT->append_to_line(`"`var'"', 1, "left")
+		
+		forv col_i = 1/`n_cols' {
+			frame `indframe': loc has = fe`col_i' == 1
+			mata pT->append_to_line(`"&"', 0, "no")
+			if `has' 	mata pT->append_to_line(`"\checkbox"', 1, "center")
+			else 		mata pT->append_to_line(`""', 1, "center")
+		}
+		mata: pT->append_to_line(`"\\"', 0, "no")
+	}
 end
 
 program statex_est_stats
@@ -699,7 +791,11 @@ program statex_est_stats
 	* Write table
 	*************
 	
+	loc n = 1
 	foreach stat_name of local stats {
+		if `n'>1 mata: pT->add_line("")
+		loc n = `n'+1
+		
 		// Label stats
 		loc stat_label = ""
 		loc stat_label_written = 0 // FLAG: Can just do if, else if etc?
@@ -731,9 +827,8 @@ program statex_est_stats
 			mata pT->append_to_line("&", 0, "no")
 			mata pT->append_to_line("`stat'", 1, "center")
 		} 
-		
 		mata: pT->append_to_line(`"\\"', 0, "no")
-		mata: pT->add_line("")
+		
 	}
 end
 
@@ -919,8 +1014,6 @@ prog statex_from_data
 	********
 	// Table is open
 	if "`name'"=="" mata: _ = statex.get_current()
-	
-
 end
 
 
@@ -977,11 +1070,13 @@ prog statex_footer
 	
 	mata: st_local("paren", pT->paren)
 	mata: st_local("used_paren", strofreal(pT->used_paren))
+	mata: st_local("ci_level", strofreal(pT->ci_level))
 	
 	if `used_paren' | "`paren'"!="" { // FLAG Robust currently unused - and include clustering
 		if "`paren'"=="se" 						 	loc in_paren = "Standard errors in parentheses"
 		if "`paren'"=="t"							loc in_paren = "t statistics in parenthesis"
 		if "`paren'"=="p"							loc in_paren = "p-values in parenthesis"
+		if "`paren'"=="ci"							loc in_paren = "`ci_level' \% confidence intervals in parenthesis"
 		mata: pT->add_line(`"\multicolumn{`n_cols_tab'}{l}{\footnotesize `in_paren'} \\"')
 	}
 	
