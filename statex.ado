@@ -520,8 +520,8 @@ prog statex_est_prepare
 	}
 	
 	// Escape characters (FLAG: not complete)
-	frame `estframe': qui replace varlist = subinstr(varlist, "#", " \#", .)
-	frame `estframe': qui replace varlist = subinstr(varlist, "_", "\_", .)
+	frame `estframe': qui replace clean_varlist = subinstr(clean_varlist, "#", " \#", .)
+	frame `estframe': qui replace clean_varlist = subinstr(clean_varlist, "_", "\_", .)
 end
 
 prog statex_est_extract // Take est and place in (i.e. add to) frame
