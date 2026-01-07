@@ -705,7 +705,7 @@ prog statex_est_header
 	foreach est of local namelist {
 		qui estimates restore `est'
 		loc y `e(depvar)'
-		cap if "`label'"!="" 	loc ylab : variable label `y'
+		cap if "`label'"!="" 	loc ylab : variable label `y' // cap in case the variable is not defined
 		if "`ylab'"==""		loc ylab = "`y'"
 		loc yrow = `"`yrow' "`ylab'""'
 		loc align = "`align' c"
