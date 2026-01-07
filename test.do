@@ -6,16 +6,17 @@ adopath + "C:/Users/`=c(username)'/Documents/GitHub/Statex"
 //findfile statex.mata
 //qui do "`r(fn)'"
 
-//do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
+do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.ado"
 
 statex new, n_cols(3) paren("ci")
-
-mata: mata clear
-
 statex new, n_cols(3) paren("ci")
 
-mata: pT = statex.get_table("Table1")
+mata: pT = statex.get_table("Table2")
+
+statex dir
+statex change, name(Table1)
+statex dir
 
 mata: pT->paren
 
@@ -62,6 +63,16 @@ statex_write, filename("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test
 exit198
 //mata: pT->write_table("C:\Users\s16501\Documents\GitHub\Statex\text_table3.tex")
 
+mata
+tables = statex.tables
+
+keep = J(rows(tables), 1, 1)
+for (i=1; i<=rows(tables); i++) {
+	if (tables[i] == p) keep[i] = 0
+}
+keep
+
+end
 
 /*
 

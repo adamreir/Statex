@@ -4,7 +4,7 @@
 * Table object *
 ****************
 
-mata: mata clear
+//mata: mata clear
 mata 
 class Table {
 	string vector content // Private?
@@ -144,7 +144,7 @@ end
 * Global Statex Class Def*
 **************************
 
-cap mata: mata drop statex
+//cap mata: mata drop statex
 cap mata: mata drop Statex()
 mata: 
 class Statex {
@@ -157,6 +157,7 @@ class Statex {
 	
 	// Add delete etc.
 	pointer scalar add_table() //public
+	void drop_table()
 	
 	// Table management
 	void dir() //public
@@ -186,6 +187,33 @@ pointer scalar Statex::add_table(string scalar name, real scalar ncols, string s
 	current = name
 	
 	return(&T)
+}
+
+void Statex::drop_table(pointer(real) scalar pT) {
+	real colvector keep 
+	real scalar i
+	class Table scalar T
+	
+	// Remove
+	keep = J(rows(tables), 1, 1)
+	for (i=1; i<=rows(tables); i++) {
+        if (tables[i] == pT) keep[i] = 0
+    }
+	
+	tables = select(tables, keep)
+	
+	// Check if the current table was dropped (and set no current if true)
+	if (current=="") {
+		return
+	}
+	for (i=1; i<=rows(tables); i++) {
+		T = (*tables[i])
+		if (current == T.name) {
+			return
+		}
+	}
+	current = ""
+	return
 }
 
 // Look for names
@@ -227,7 +255,7 @@ pointer scalar Statex::get_table(string scalar name) {
 // Current table etc. 
 string scalar Statex::get_current() {
 	if (current=="") {
-		_error(111, "No table set")
+		_error(111, "No current table set. Run 'help statex_manage' for more information.")
 		return("")
 	}
 	st_local("name", current)

@@ -112,19 +112,27 @@ end
 
 // FLAG: 
 prog statex_change
-
+	syntax, name(string)
 	* Check that mata object statex exists: 
 	***************************************
 	statex_assert_mata
-
+	
+	mata: statex.set_current("`name'")
+	
 end
 
 prog statex_drop
-
+	syntax, [name(string)]
 	* Check that mata object statex exists: 
 	***************************************
 	statex_assert_mata
-
+	
+	*
+	************
+	if "`name'"=="" mata: _ = statex.get_current()
+	mata: pT = statex.get_table("`name'")
+	mata: statex.drop_table(pT)
+	
 end
 
 ********************************************************************************
@@ -1248,7 +1256,7 @@ include "statex.mata", adopath
 
 prog statex_assert_mata
 	syntax, [exit]
-
+	/*
 	cap mata: statex 
 	if _rc {
 		di as error `"{it:statex}: Mata object "statex" missing. Did you run "mata: mata clear"?. Reinitializing. Note that all data is lost."'
@@ -1259,5 +1267,6 @@ prog statex_assert_mata
 		
 		if "`exit'"=="exit" exit 349
 	}
+	*/
 	
 end
