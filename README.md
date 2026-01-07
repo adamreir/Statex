@@ -5,3 +5,5 @@ Installation:
 ```
 net install statex, from("https://raw.githubusercontent.com/adamreir/statex/main")
 ```
+
+Tested on Stata MP 16.1
