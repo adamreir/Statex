@@ -260,26 +260,3 @@ end
 mata: statex = Statex()
 mata: statex.init()
 
-/*
-// Try
-mata: statex = Statex()
-mata: statex.init()
-cap prog drop tmp
-mata: T1 = statex.add_table("name1", "filen1", 5, ".05 .01 .001", "se", 10)
-mata: T1.add_line("a line")
-mata: T1.add_line("another line")
-mata: T2 = statex.add_table("name2", "filen2", 3, ".05 .01 .001", "se", 10)
-mata: statex.get_current()
-mata: statex.set_current("name1")
-
-mata: statex.confirm_name_exists("name1")
-
-
-mata: T1.li()
-
-mata: statex.tables
-mata: statex.dir()
-
-
-
-
