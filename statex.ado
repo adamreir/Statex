@@ -697,7 +697,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 	foreach escape in "#" "_" {
 	foreach v in varlist label {
 		frame `estframe': qui replace clean_`v' = subinstr(clean_`v', "`escape'", "\\`escape'", .)
-		frame `inddframe': qui replace `v' = subinstr(`v', "`escape'", "\\`escape'", .)
+		frame `indframe': qui replace `v' = subinstr(`v', "`escape'", "\\`escape'", .)
 	}
 	}
 end
