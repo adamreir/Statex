@@ -596,7 +596,6 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		loc n = colsof(b)
 		forv i = 1/`n' {
 			loc varname : word `i' of `varnames'
-			loc dropped = 0
 			//if substr("`varname'",1,2)!="o." {
 				
 				// Check if `varname' is in `indicate'?
@@ -607,12 +606,14 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 				}
 				
 				if `in_indicate'==0 { // Include parameter
-					// Make clean version of variable and label					
+					// Make clean version of variable and label	
+					loc dropped = 0				
 					loc rest = "`varname'"
 					loc clean_varlist = ""
 					loc clean_label = ""
 					while `"`rest'"'!="" {
 						gettoken tok rest : rest, parse("#")
+						loc tok = subinstr(`"`tok'"', " ", "", .)
 						if "`tok'"=="#" loc clean_varlist = "`clean_varlist' # "
 						if "`tok'"=="#" loc clean_label   = "`clean_label' # "
 						else {
@@ -652,7 +653,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 					loc ci_u = `b' + `crit'*`se'
 				
 					frame `estframe' {
-							qui count if varlist == "`varname'"
+							qui count if clean_varlist == "`clean_varlist'"
 							if r(N)==0 {
 								qui set obs `=_N+1'
 								qui replace varlist = "`varname'" if _n==_N
