@@ -799,7 +799,7 @@ prog statex_est_write
 		mata: pT->append_to_line(`"`var'"', 1, "left")
 		
 		forv col_i = 1/`n_cols' {
-			frame `indframe': loc has = fe`col_i' == 1
+			frame `indframe': loc has = fe`col_i'[`row_i'] == 1
 			mata pT->append_to_line(`"&"', 0, "no")
 			if `has' 	mata pT->append_to_line(`"\checkbox"', 1, "center")
 			else 		mata pT->append_to_line(`""', 1, "center")
@@ -869,7 +869,6 @@ program statex_est_stats
 			mata pT->append_to_line("`stat'", 1, "center")
 		} 
 		mata: pT->append_to_line(`"\\"', 0, "no")
-		
 	}
 end
 
