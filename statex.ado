@@ -393,6 +393,7 @@ prog statex_est
 	frame create __table_res
 	frame __table_res: qui g strL varlist = ""
 	frame __table_res: qui g strL clean_varname = ""
+	frame __table_res: qui g strL clean_label = ""
 	
 	cap frame drop __table_indicate
     frame create __table_indicate
@@ -514,16 +515,7 @@ prog statex_est_prepare
 	}
 	
 	
-	if `label' {
-		frame `estframe': qui levelsof varlist, local(varlist)
-		loc varlist : list clean varlist
-		foreach v of local varlist {
-			cap loc lab : variable label `v'
-			if _rc 	  			loc lab = ""
-			if "`lab'"!="" frame `estframe': qui replace varlist = subinstr(varlist, "`v'", "`lab'", .)
-		}
-		frame `estframe': qui replace varlist = subinstr(varlist, "_cons", "Constant", .)
-	}
+	if `label' replace clean_varlist = clean_label
 	
 	// Escape characters (FLAG: not complete)
 	frame `estframe': qui replace varlist = subinstr(varlist, "#", " \#", .)
@@ -613,34 +605,35 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 				}
 				
 				if `in_indicate'==0 { // Include parameter
-					set trace on
-					set tracedepth 5
-				
+					// Make clean version of variable and label					
 					loc rest = "`varname'"
 					loc clean_varname = ""
+					loc clean_label = ""
 					while `"`rest'"'!="" {
 						gettoken tok rest : rest, parse("#")
 						if "`tok'"=="#" loc clean_varname = "`clean_varname' # "
-						di "`tok'"
+						if "`tok'"=="#" loc clean_label   = "`clean_label' # "
 						else {
 							if substr("`tok'", 1, 2)=="o." | substr("`tok'", 1, 3)=="co." loc dropped = 1
 							foreach pat in "c." "o." "co." {
 								loc pat_n = strlen("`pat'")
 								loc tok = cond(substr("`tok'",1,`pat_n')=="`pat'", substr("`tok'", `=`pat_n'+1',.), "`tok'")
+								
+								loc lab = ""
+								cap loc lab : variable label `tok'
+								if `"`tok'"'=="_cons" 	loc lab = "Constant"
+								if `"`lab'"'=="" 		loc lab = "`tok'"
 							}
 							loc clean_varname = "`clean_varname'`tok'"
+							loc clean_label = "`clean_label'`lab'"
 						}
 					}
 					
-					di `dropped'
-					di "`varname'->`clean_varname'"
 					
-					
-					loc clean_varname = subinstr("`clean_varname'", "#", " ",.)
 					loc b = b[1,`i']
 					loc se = sqrt(V[`i', `i'])
 					loc t = `b'/`se'
-					
+												
 					// Use critical values from t-statistic unless there are many dfs to calculate p-values and CIs (following estout convention)
 					loc df_max = 2e17
 					loc level_dec = (100-`ci_level')/(2*100)
@@ -662,15 +655,19 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 								qui set obs `=_N+1'
 								qui replace varlist = "`varname'" if _n==_N
 								qui replace clean_varname = "`clean_varname'" if _n==_N
+								qui replace clean_label = "`clean_label'" if _n==_N
 							}
-							if !`dropped' {
-								qui replace b`column'  = `b'  if varlist=="`varname'"
-								qui replace se`column' = `se' if varlist=="`varname'"
-								qui replace t`column'  = `t'  if varlist=="`varname'"
-								qui replace p`column'  = `p'  if varlist=="`varname'"
-								qui replace ci_l`column' = `ci_l' if varlist=="`varname'"
-								qui replace ci_u`column' = `ci_u' if varlist=="`varname'"
+							if `dropped' {
+								foreach param in b se t p ci_l ci_u {
+									loc ``param'`column'' = .
+								}
 							}
+							qui replace b`column'  = `b'  if varlist=="`varname'"
+							qui replace se`column' = `se' if varlist=="`varname'"
+							qui replace t`column'  = `t'  if varlist=="`varname'"
+							qui replace p`column'  = `p'  if varlist=="`varname'"
+							qui replace ci_l`column' = `ci_l' if varlist=="`varname'"
+							qui replace ci_u`column' = `ci_u' if varlist=="`varname'"
 					}
 				}
 				else { // Include indicator
