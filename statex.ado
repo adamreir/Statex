@@ -412,21 +412,6 @@ prog statex_est
 	loc n_cols : list sizeof namelist
 	statex_est_write, n_cols(`n_cols') name(`name') `b' `paren' `stars' estframe(__table_res) indframe(__table_indicate)
 	
-	// Flag: Should look for these variables in `absorb' (or wherever they are stored), as well as the usual varlists. 
-	if `"`absorbed'"'!="" {
-		foreach abs of local absorbed {
-			loc abs = subinstr(`"`abs'"', "#", `"\#"', .)
-			mata: pT->add_line("`abs'", 1) // Write FE text
-			
-			// Write checkmarks
-			loc param_cols = `ncols' - 1 
-			forv n = 1/`param_cols' {
-				mata: pT->append_to_line(`" & \checkmark"', 0, "center")
-			}
-			//mata: pT->append_to_line(" \\", 0)
-		}
-	}
-	
 	if "`nostats'"=="" {
 		if "`longmidrule'"!="" statex_midrule, name(`name')
 		else mata: pT->append_to_line(`" \cmidrule(lr){2-`ncols'}"', 0, "no")
@@ -519,9 +504,6 @@ prog statex_est_prepare
 		frame `estframe': replace clean_varlist = clean_label
 	}
 	
-	// Escape characters (FLAG: not complete)
-	frame `estframe': qui replace clean_varlist = subinstr(clean_varlist, "#", " \#", .)
-	frame `estframe': qui replace clean_varlist = subinstr(clean_varlist, "_", "\_", .)
 end
 
 prog statex_est_extract // Take est and place in (i.e. add to) frame
@@ -613,7 +595,6 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 					loc clean_label = ""
 					while `"`rest'"'!="" {
 						gettoken tok rest : rest, parse("#")
-						loc tok = subinstr(`"`tok'"', " ", "", .)
 						if "`tok'"=="#" loc clean_varlist = "`clean_varlist' # "
 						if "`tok'"=="#" loc clean_label   = "`clean_label' # "
 						else {
@@ -711,6 +692,14 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 	else { 
 		frame `indframe': drop rowsum
 	}
+	
+	// Escape characters (FLAG: not complete)
+	foreach escape in "#" "_" {
+	foreach v in varlist label {
+		frame `estframe': qui replace clean_`v' = subinstr(clean_`v', "`escape'", "\\`escape'", .)
+		frame `inddframe': qui replace `v' = subinstr(`v', "`escape'", "\\`escape'", .)
+	}
+	}
 end
 
 // FLAG: add options (bold, label). Also add group to group yvars (with cmidrule)
@@ -774,7 +763,7 @@ prog statex_est_write
 			
 			mata pT->append_to_line(`"&"', 0, "no")
 			if `__b'!=.		mata pT->append_to_line(`"`__b'`__stars'"', 1, "center")
-			else			mata pT->append_to_line(`""', 1, "center")
+			else			mata pT->append_to_line(`"."', 1, "center")
 		}
 		mata: pT->append_to_line(`"\\ "', 0, "no")
 		
