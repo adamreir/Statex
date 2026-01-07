@@ -468,8 +468,6 @@ prog statex_est_prepare
 
 	mata: st_local("ci_level", strofreal(pT->ci_level))
 	statex_est_extract `namelist', ci_level(`ci_level') estframe(`estframe') indframe(`indframe') `indicate' // Adds estimated params to frame
-
-	frame __table_res: qui replace varlist = subinstr(varlist, "c.", " ", .)
 	
 	if `"`drop'"'!="" {
 		foreach token of local drop {
@@ -645,7 +643,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 							}
 							if `dropped' {
 								foreach param in b se t p ci_l ci_u {
-									loc `param'`column' = .
+									loc `param' = .
 								}
 							}
 							qui replace b`column'  = `b'  if varlist=="`varname'"
@@ -686,8 +684,6 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 	if r(N)>0 {
 		frame `indframe': qui levelsof varlist if rowsum==0, local(notfound)
 		loc notfound : list clean notfound
-		//frame drop __table_res
-		//frame drop __table_indicate
 		di as error `"Cannot indicate variables. Not found in estimation results: `notfound'"'
 		exit 111
 	}
