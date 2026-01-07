@@ -751,7 +751,7 @@ prog statex_est_write
 	
 	// Write point estimates
 	forv row_i = 1/`n_vars' {
-		frame `estframe': loc var = varlist[`row_i']
+		frame `estframe': loc var = clean_varlist[`row_i']
 		mata: pT->append_to_line(`"`var'"', 1, "left")
 		
 		// beta/stars
