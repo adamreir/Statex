@@ -328,7 +328,7 @@ end
 ***********
 
 prog statex_est
-	syntax namelist, [name(namelist max=1)]  label [b(passthru) paren(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) longmidrule stars(passthru)] ///
+	syntax namelist, [name(namelist max=1)]  [label] [b(passthru) paren(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) longmidrule stars(passthru)] ///
 	[indicate(passthru)] [noheader]
 	
 	* Check that mata object statex exists: 
@@ -705,7 +705,7 @@ prog statex_est_header
 	foreach est of local namelist {
 		qui estimates restore `est'
 		loc y `e(depvar)'
-		if "`label'"!="" 	loc ylab : variable label `y'
+		cap if "`label'"!="" 	loc ylab : variable label `y'
 		if "`ylab'"==""		loc ylab = "`y'"
 		loc yrow = `"`yrow' "`ylab'""'
 		loc align = "`align' c"
