@@ -595,8 +595,10 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 					loc clean_label = ""
 					while `"`rest'"'!="" {
 						gettoken tok rest : rest, parse("#")
-						if "`tok'"=="#" loc clean_varlist = "`clean_varlist' # "
-						if "`tok'"=="#" loc clean_label   = "`clean_label' # "
+						if "`tok'"=="#" {
+							loc clean_varlist = "`clean_varlist' # "
+							loc clean_label   = "`clean_label' # "
+						}
 						else {
 							if substr("`tok'", 1, 2)=="o." | substr("`tok'", 1, 3)=="co." loc dropped = 1
 							foreach pat in "c." "o." "co." {
