@@ -11,6 +11,10 @@ adopath + "C:/Users/`=c(username)'/Documents/GitHub/Statex"
 
 statex new, n_cols(3) paren("ci")
 
+mata: mata clear
+
+statex new, n_cols(3) paren("ci")
+
 mata: pT = statex.get_table("Table1")
 
 mata: pT->paren

@@ -34,7 +34,6 @@ prog statex
 	
 end
 
-
 ********************************************************************************
 ************************ Manage Statex Tables **********************************
 ********************************************************************************
@@ -45,6 +44,10 @@ prog statex_new
 		[coltypes(string)] n_cols(integer) ///
 		[stars(numlist descending min=3 max=3) ci_level(real 95) paren(string) replace] ///
 		[width(integer 20)]
+	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata
 	
 	* Parse
 	*******
@@ -89,21 +92,38 @@ end
 prog statex_list
 	syntax, [name(string)]
 	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
+	
 	if "`name'"=="" mata: _ = statex.get_current()
 	mata: pT = statex.get_table("`name'")
 	mata: pT->li()
 end
 
 prog statex_dir
+	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata
+
 	mata: statex.dir()
 end
 
 // FLAG: 
 prog statex_change
 
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata
+
 end
 
 prog statex_drop
+
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata
 
 end
 
@@ -115,6 +135,10 @@ prog statex_row
 	syntax, ///
 		[name(namelist max=1)] ///
 		row(string asis) [multicolumn(numlist integer min=1) noblank align(string) underline(string asis) bold]
+	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
 	
 	* Name
 	******
@@ -265,6 +289,10 @@ prog statex_panel
 		text(string) ///
 		[panel_name(string) nobold]
 	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
+	
 	* Write Panel Header
 	********************
 	
@@ -294,6 +322,10 @@ end
 prog statex_est
 	syntax namelist, [name(namelist max=1)]  label [b(passthru) paren(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) longmidrule stars(passthru)] ///
 	[indicate(passthru)] [noheader]
+	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
 	
 	* Syntax
 	********
@@ -837,6 +869,13 @@ end
 prog statex_mat
 	syntax, b(string asis) [name(string) rowlabels(string asis) titles(string asis) se(namelist max=1) p(namelist max=1)] //Flag add 
 	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
+	
+	* Syntax
+	********
+	// Table is open
 	if "`name'"=="" mata: _ = statex.get_current()
 	mata: pT = statex.get_table("`name'")
 	mata: st_local("ncols_statex", strofreal(pT->ncols))
@@ -1012,6 +1051,10 @@ end
 prog statex_from_data
 	syntax varlist, [mat(namelist max=1) name(namelist max=1)]
 	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
+	
 	* Syntax
 	********
 	// Table is open
@@ -1035,6 +1078,10 @@ end
 prog statex_footer
 	/// FLAG : add option to turn subnotes off (e.g. nostars nose etc.)
 	syntax, [name(namelist max=1) stars robust cluster(string asis) custom(string asis)]
+	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
 	
 	* Syntax
 	********
@@ -1097,6 +1144,10 @@ end
 prog statex_close
 	syntax, [name(namelist max=1) /stars robust cluster(passthru) custom(passthru)]
 	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
+	
 	* Syntax
 	********
 	// Table is open
@@ -1121,6 +1172,10 @@ end
 
 prog statex_save
 	syntax, [name(namelist max=1) replace] filename(string asis)
+	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
 	
 	* Syntax
 	********
@@ -1168,12 +1223,16 @@ prog statex_save
 	}
 end
 
-*
-* Other
-*
+*********
+* Other *
+*********
 
 prog statex_midrule
 	syntax, [name(namelist max=1)]
+	
+	* Check that mata object statex exists: 
+	***************************************
+	statex_assert_mata, exit
 
 	if "`name'"=="" mata: _ = statex.get_current()
 	mata: pT = statex.get_table("`name'")
@@ -1186,3 +1245,19 @@ end
 *********************
 
 include "statex.mata", adopath
+
+prog statex_assert_mata
+	syntax, [exit]
+
+	cap mata: statex 
+	if _rc {
+		di as error `"{it:statex}: Mata object "statex" missing. Did you run "mata: mata clear"?. Reinitializing. Note that all data is lost."'
+		//mata: statex = Statex()
+		//mata: statex.init()
+		qui findfile statex.mata
+        quietly do "`r(fn)'"
+		
+		if "`exit'"=="exit" exit 349
+	}
+	
+end
