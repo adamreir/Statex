@@ -10,6 +10,7 @@ do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.ado"
 
 statex new, n_cols(3) paren("ci")
+statex drop
 statex new, n_cols(3) paren("ci")
 
 mata: pT = statex.get_table("Table2")

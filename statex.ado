@@ -392,6 +392,7 @@ prog statex_est
 	cap frame drop __table_res
 	frame create __table_res
 	frame __table_res: qui g strL varlist = ""
+	frame __table_res: qui g strL clean_varname = ""
 	
 	cap frame drop __table_indicate
     frame create __table_indicate
@@ -601,20 +602,40 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		loc n = colsof(b)
 		forv i = 1/`n' {
 			loc varname : word `i' of `varnames'
-			if substr("`varname'",1,2)!="o." {
+			loc dropped = 0
+			//if substr("`varname'",1,2)!="o." {
 				
 				// Check if `varname' is in `indicate'?
                 local in_indicate = 0
 				frame `indframe': qui levelsof varlist, local(indicated)
-				//loc indicated : list clean indicated
 				foreach pat of local indicated {
 					if strmatch("`varname'", `"`pat'"') local in_indicate = 1
-					//di `"			compare |`pat'| with |`varname'"'
-					//di strmatch("`varname'", `"`pat'"')
 				}
 				
 				if `in_indicate'==0 { // Include parameter
-					loc clean_varname = subinstr("`varname'", "c.", " ", .)
+					set trace on
+					set tracedepth 5
+				
+					loc rest = "`varname'"
+					loc clean_varname = ""
+					while `"`rest'"'!="" {
+						gettoken tok rest : rest, parse("#")
+						if "`tok'"=="#" loc clean_varname = "`clean_varname' # "
+						di "`tok'"
+						else {
+							if substr("`tok'", 1, 2)=="o." | substr("`tok'", 1, 3)=="co." loc dropped = 1
+							foreach pat in "c." "o." "co." {
+								loc pat_n = strlen("`pat'")
+								loc tok = cond(substr("`tok'",1,`pat_n')=="`pat'", substr("`tok'", `=`pat_n'+1',.), "`tok'")
+							}
+							loc clean_varname = "`clean_varname'`tok'"
+						}
+					}
+					
+					di `dropped'
+					di "`varname'->`clean_varname'"
+					
+					
 					loc clean_varname = subinstr("`clean_varname'", "#", " ",.)
 					loc b = b[1,`i']
 					loc se = sqrt(V[`i', `i'])
@@ -640,19 +661,22 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 							if r(N)==0 {
 								qui set obs `=_N+1'
 								qui replace varlist = "`varname'" if _n==_N
+								qui replace clean_varname = "`clean_varname'" if _n==_N
 							}
-							qui replace b`column'  = `b'  if varlist=="`varname'"
-							qui replace se`column' = `se' if varlist=="`varname'"
-							qui replace t`column'  = `t'  if varlist=="`varname'"
-							qui replace p`column'  = `p'  if varlist=="`varname'"
-							qui replace ci_l`column' = `ci_l' if varlist=="`varname'"
-							qui replace ci_u`column' = `ci_u' if varlist=="`varname'"
+							if !`dropped' {
+								qui replace b`column'  = `b'  if varlist=="`varname'"
+								qui replace se`column' = `se' if varlist=="`varname'"
+								qui replace t`column'  = `t'  if varlist=="`varname'"
+								qui replace p`column'  = `p'  if varlist=="`varname'"
+								qui replace ci_l`column' = `ci_l' if varlist=="`varname'"
+								qui replace ci_u`column' = `ci_u' if varlist=="`varname'"
+							}
 					}
 				}
 				else { // Include indicator
 					frame `indframe': replace fe`column'=1 if strmatch("`varname'", varlist)
 				}
-			}
+			//}
 		}
 		
 		* Absorbed FEs
