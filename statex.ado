@@ -392,7 +392,7 @@ prog statex_est
 	cap frame drop __table_res
 	frame create __table_res
 	frame __table_res: qui g strL varlist = ""
-	frame __table_res: qui g strL clean_varname = ""
+	frame __table_res: qui g strL clean_varlist = ""
 	frame __table_res: qui g strL clean_label = ""
 	
 	cap frame drop __table_indicate
@@ -609,11 +609,11 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 				if `in_indicate'==0 { // Include parameter
 					// Make clean version of variable and label					
 					loc rest = "`varname'"
-					loc clean_varname = ""
+					loc clean_varlist = ""
 					loc clean_label = ""
 					while `"`rest'"'!="" {
 						gettoken tok rest : rest, parse("#")
-						if "`tok'"=="#" loc clean_varname = "`clean_varname' # "
+						if "`tok'"=="#" loc clean_varlist = "`clean_varlist' # "
 						if "`tok'"=="#" loc clean_label   = "`clean_label' # "
 						else {
 							if substr("`tok'", 1, 2)=="o." | substr("`tok'", 1, 3)=="co." loc dropped = 1
@@ -626,7 +626,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 								if `"`tok'"'=="_cons" 	loc lab = "Constant"
 								if `"`lab'"'=="" 		loc lab = "`tok'"
 							}
-							loc clean_varname = "`clean_varname'`tok'"
+							loc clean_varlist = "`clean_varlist'`tok'"
 							loc clean_label = "`clean_label'`lab'"
 						}
 					}
@@ -656,7 +656,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 							if r(N)==0 {
 								qui set obs `=_N+1'
 								qui replace varlist = "`varname'" if _n==_N
-								qui replace clean_varname = "`clean_varname'" if _n==_N
+								qui replace clean_varlist = "`clean_varlist'" if _n==_N
 								qui replace clean_label = "`clean_label'" if _n==_N
 							}
 							if `dropped' {
