@@ -659,7 +659,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 							}
 							if `dropped' {
 								foreach param in b se t p ci_l ci_u {
-									loc ``param'`column'' = .
+									loc `param'`column' = .
 								}
 							}
 							qui replace b`column'  = `b'  if varlist=="`varname'"
