@@ -3,8 +3,8 @@ mata: mata clear
 discard
 adopath + "C:/Users/`=c(username)'/Documents/GitHub/Statex"
 
-findfile statex.mata
-qui do "`r(fn)'"
+//findfile statex.mata
+//qui do "`r(fn)'"
 
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.ado"
@@ -20,6 +20,7 @@ set obs 20000
 g x1 = rnormal()
 g x2 = rnormal()
 g y = x1 + x2 + rnormal()
+lab var y "Y"
 g year = floor(runiform()*5+2000)
 
 lab var x1 "X1"

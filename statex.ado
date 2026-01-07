@@ -1178,3 +1178,9 @@ prog statex_midrule
 	mata: pT->add_line("\midrule")
 	
 end
+
+*********************
+* Include mata code *
+*********************
+
+include "statex.mata", adopath
