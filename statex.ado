@@ -515,7 +515,9 @@ prog statex_est_prepare
 	}
 	
 	
-	if `label' replace clean_varlist = clean_label
+	if `label' {
+		frame `estframe': replace clean_varlist = clean_label
+	}
 	
 	// Escape characters (FLAG: not complete)
 	frame `estframe': qui replace varlist = subinstr(varlist, "#", " \#", .)
