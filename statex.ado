@@ -711,8 +711,7 @@ prog statex_est_header
 		loc align = "`align' c"
 		loc multicolumn = "`multicolumn' 1"
 	}
-	
-	di `"statex row, row(`yrow') `bold' align(`align') name(`name') multicolumn(`multicolumn')"'
+
 	statex row, row(`yrow') `bold' align(`align') name(`name') multicolumn(`multicolumn')
 	
 end

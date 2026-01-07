@@ -201,6 +201,9 @@ void Statex::drop_table(pointer(real) scalar pT) {
     }
 	
 	tables = select(tables, keep)
+	if (rows(tables)==0) {
+		tables = J(0,1,NULL)
+	}
 	
 	// Check if the current table was dropped (and set no current if true)
 	if (current=="") {
