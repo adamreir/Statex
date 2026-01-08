@@ -14,7 +14,7 @@ prog statex
 	gettoken subcmd 0 : 0, parse(" ,")
 	local subcmd = trim("`subcmd'")
 	
-	di `"CALL: statex_`subcmd' `0'"'
+	//di `"CALL: statex_`subcmd' `0'"'
 	
 	statex_`subcmd' `0'
 	
@@ -339,15 +339,10 @@ end
 
 prog statex_est
 	syntax namelist, [name(namelist max=1)]  ///
-	[b(passthru) paren(passthru)] /// Construction of main table
-	[indicate(passthru) drop(passthru) keep(passthru) order(passthru)] /// Which variables goes where
-	[label stat(string) longmidrule stars(passthru)] ///
+	[b(passthru) paren(passthru) stars(passthru)] /// 
+	[indicate(passthru) drop(passthru) keep(passthru) order(passthru) stat(string)] /// Which variables goes where
+	[label longmidrule nogap] /// Rendition
 	[noheader notable noindic nostats] // Drop specific part of table
-	
-	foreach loc in header table stats {
-		di "`loc': ``loc''"
-		di "no`loc': `no`loc''"
-	}
 	
 	* Check that mata object statex exists: 
 	***************************************
@@ -378,7 +373,7 @@ prog statex_est
 	if `"`paren'"'=="" 	loc paren = "paren(%4.3fc)"
 	
 	if "`paren'"!="paren(none)" 	mata: pT->used_paren = 1
-	if "`stars'"!="none"	mata: pT->used_stars = 1
+	if "`stars'"!="none"			mata: pT->used_stars = 1
 	
 	// Check that namelist contains res that exists
 	foreach estname of local namelist {
@@ -430,9 +425,11 @@ prog statex_est
 	statex_est_prepare `namelist',  `label' name(`name') `drop' `keep' `order' estframe(`estframe') indframe(`indframe') `indicate'
 	
 	// append to latex table 
+		di `"statex_est_panel, n_cols(`n_cols') name(`name') `b' `paren' `stars' estframe(`estframe') `gap'"'
 	loc n_cols : list sizeof namelist
-	if "`table'"!="notable" statex_est_panel, n_cols(`n_cols') name(`name') `b' `paren' `stars' estframe(`estframe')
-	if "`indic'"!="noindic" statex_est_indic, name(`name') n_cols(`n_cols') indframe(`indframe')
+	if "`table'"!="notable" statex_est_panel, n_cols(`n_cols') name(`name') `b' `paren' `stars' estframe(`estframe') `gap'
+	if "`table'"!="notable" & "`indic'"!="noindic" & "`gap'"!="nogap" mata: pT->add_line("[1em]")
+	if "`indic'"!="noindic" statex_est_indic, name(`name') n_cols(`n_cols') indframe(`indframe') `gap'
 	
 	
 	if "`stats'"!="nostats" {
@@ -523,7 +520,7 @@ prog statex_est_prepare
 	
 	
 	if `label' {
-		frame `estframe': replace clean_varlist = clean_label
+		frame `estframe': qui replace clean_varlist = clean_label
 	}
 	
 end
@@ -587,7 +584,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		loc df_r = e(df_r)
 		mat b = e(b)
 		mat V = e(V)
-		loc absorbed = "`e(absvars)'"
+		if `"`e(absvars)'"'!="_cons" loc absorbed = `"`e(absvars)'"' // reghdfe stores e(absvars)="_cons" when no "absorb()" was provided
 		
 		* Parameters
 		************
@@ -677,7 +674,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 					}
 				}
 				else { // Include indicator
-					frame `indframe': replace fe`column'=1 if strmatch("`varname'", varlist)
+					frame `indframe': qui replace fe`column'=1 if strmatch("`varname'", varlist)
 				}
 			//}
 		}
@@ -750,7 +747,7 @@ prog statex_est_header
 end
 
 prog statex_est_panel
-	syntax, name(string) [stars(string)] n_cols(integer) b(string) paren(string) estframe(string asis) //indframe(string asis)
+	syntax, name(string) [stars(string) nogap] n_cols(integer) b(string) paren(string) estframe(string asis) //indframe(string asis)
 	// Reads params from frame and writes to table. 
 	
 	mata: pT = statex.get_table("`name'")
@@ -792,6 +789,7 @@ prog statex_est_panel
 			mata: pT->add_line(`""')
 			mata pT->append_to_line("", 1, "left")
 			
+
 			forv col_i = 1/`n_cols' {			
 				if "`in_paren'"!="ci" {
 					frame `estframe': loc paren_content = `in_paren'`col_i'[`row_i']
@@ -816,14 +814,14 @@ prog statex_est_panel
 		}
 		
 		
-		if `row_i'!=`n_vars' mata: pT->add_line("[1em]")
+		if `row_i'!=`n_vars' & "`gap'"!="nogap" mata: pT->add_line("[1em]")
 		if `row_i'!=`n_vars' mata: pT->add_line(`""')
 		//else 				 mata: pT->add_line(`""')
 	}
 end
 
 prog statex_est_indic
-	syntax, name(string) n_cols(integer) indframe(string asis)
+	syntax, name(string) n_cols(integer) indframe(string asis) [nogap]
 	
 	// Write indicators
 	frame `indframe': loc n_indics = _N
@@ -840,6 +838,7 @@ prog statex_est_indic
 			else 		mata pT->append_to_line(`""', 1, "center")
 		}
 		mata: pT->append_to_line(`"\\"', 0, "no")
+		if `row_i'<`n_indics' & "`gap'"!="nogap" mata: pT->add_line(`"[1em]"')
 	}
 end
 
@@ -1149,7 +1148,6 @@ prog statex_footer
 		gettoken 1stars stars : stars
 		gettoken 2stars 3stars : stars
 		forv n = 1/3 {
-			di "`n'stars: ``n'stars'"
 			loc `n'stars = string(``n'stars', "%4.3fc")
 		}
 		

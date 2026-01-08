@@ -61,8 +61,6 @@ void Table::append_to_line(string scalar line, real scalar pad, string scalar lc
 		line = pad_string(line, lcr)
 	}
 	content[rows(content),] = content[rows(content),] + line
-	//printf(line)
-	//printf("cell_overflow:" + strofreal(cell_overflow) + "\n")
 }
 
 // Keeps track of Panel index (A, B, ...). Sets `panel' to A, B, C etc. when called. 
@@ -73,7 +71,6 @@ void Table::panel() {
 	current = panel_counter
 	panel = ""
 	panel_counter++
-	panel_counter
 	
 	while (current>90) {
 		panel = panel + "A"

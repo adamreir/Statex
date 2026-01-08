@@ -1,7 +1,10 @@
 
+global statex   = "C:/Users/`=c(username)'/Documents/GitHub/Statex"
+global overleaf = "C:/Users/s16501/Dropbox/Apps/Overleaf/statex"
+
 mata: mata clear
 discard
-adopath + "C:/Users/`=c(username)'/Documents/GitHub/Statex"
+adopath + "${statex}"
 
 //findfile statex.mata
 //qui do "`r(fn)'"
@@ -11,28 +14,7 @@ do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 
 
 
-statex new, n_cols(3) paren("ci")
-statex new, n_cols(3) paren("ci")
-statex new, n_cols(3) paren("ci")
-statex new, n_cols(3) paren("ci")
-
-statex dir
-statex drop _all
-statex dir
-
-mata: 
-
-mata: 
-
-pT = statex.get_table("Table2")
-pT
-statex.drop_table((*pT))
-
-
-end
-
-
-mata: pT = statex.get_table("Table1")
+statex new, n_cols(3) paren("se")
 
 clear
 set obs 20000
@@ -41,14 +23,16 @@ g x2 = rnormal()
 g y = x1 + x2 + rnormal()
 lab var y "Y"
 g year = floor(runiform()*5+2000)
+g id = floor(runiform()*5+1)
 
 lab var x1 "X1"
 
 //set trace on
 set tracedepth 2
 
-eststo est1: qui reg     y x1 x2 i.year
-eststo est2: qui reghdfe y x1, absorb(i.year) 
+eststo est1: qui reghdfe y x1 x2 i.year i.id
+estadd scalar M = 123
+eststo est2: qui reghdfe y x1			, absorb(i.year i.id) 
 
 //statex est_extract est1 est2, indicate("Xs=x?", indicators("yes" "no"))
 //frame __table_res: li
@@ -63,18 +47,26 @@ set tracedepth 4
 
 statex midrule
 statex panel, text("A panel")
-statex est est1 est2, label b(%3.2fc) indicate("Year FE=*year") noindic 
+statex est est1 est2, label b(%3.2fc) indicate("Year FE=*year" "indiv FE=*.id") nogap
+/*
 statex midrule
 statex panel, text("Another panel")
-statex est est1 est2, label b(%3.2fc) indicate("Year FE=*year") noindic //se(%3.2fc)
-statex panel, text("Fixed Effects")
+statex est est1 est2, label b(%3.2fc) indicate("Year FE=*year") //noindic //se(%3.2fc)
+statex panel, text("Just Fixed Effects")
 statex est est1 est2, indicate("Year FE=*year") noheader notable nostats
+*/
+
 statex close, robust
+
+
 statex list
 
 //mata: pT->write_table("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test1.tex")
 
-statex_write, filename("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test1.tex") replace
+
+esttab est1 est2 using "${overleaf}/tables/esttab1.tex", replace indicate("Year FE=*.year" "Indiv FE=*.id", label("\checkbox" "")) stats(N M)
+esttab est1 est2 using "${overleaf}/tables/esttab_nogap.tex", replace nogap  indicate("Year FE=*.year" "Indiv FE=*.id", label("\checkbox" "")) stats(N M)
+statex_write, filename("${overleaf}/tables/test1.tex") replace
 
 exit198
 //mata: pT->write_table("C:\Users\s16501\Documents\GitHub\Statex\text_table3.tex")
