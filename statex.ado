@@ -1187,7 +1187,7 @@ prog statex_footer
 	if `"`cluster'"'!="" mata: pT->add_line(`"\multicolumn{`n_cols_tab'}{l}{\footnotesize Standard errors are HAC robust and clustered on `cluster'} \\"')
 	
 	if `"`custom'"'!="" {
-		if strpos(`"`custom'"', `"""')==0 loc opt = `""`custom'""'
+		if strpos(`"`custom'"', `"""')==0 loc custom = `""`custom'""'
 		foreach custom_msg of local custom {
 		mata: pT->add_line(`"\multicolumn{`n_cols_tab'}{l}{`custom_msg'}"')	
 		}
@@ -1196,7 +1196,7 @@ end
 
 
 prog statex_close
-	syntax, [name(namelist max=1) stars robust cluster(passthru) custom(passthru)]
+	syntax, [name(namelist max=1) footer(string asis)]
 	
 	* Check that mata object statex exists: 
 	***************************************
@@ -1207,6 +1207,9 @@ prog statex_close
 	// Table is open
 	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
+	
+	loc 0 , `footer'
+	syntax, [stars robust cluster(passthru) custom(passthru)]
 	
 	/*
 	if "`notextprocessing'"=="" {

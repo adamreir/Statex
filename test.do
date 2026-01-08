@@ -47,7 +47,7 @@ set tracedepth 4
 
 statex midrule
 statex panel, text("A panel")
-statex est est1 est2, label b(%3.2fc) indicate("Year FE=*.year" "indiv FE=*.id") nogap
+statex est est1 est2, label b(%3.2fc) paren(%3.2fc) indicate("Year FE=*.year" "indiv FE=*.id") nogap
 /*
 statex midrule
 statex panel, text("Another panel")
@@ -56,7 +56,7 @@ statex panel, text("Just Fixed Effects")
 statex est est1 est2, indicate("Year FE=*year") noheader notable nostats
 */
 
-statex close, robust
+statex close, footer(robust custom(`"A custom footer"' a nother))
 
 
 statex list
