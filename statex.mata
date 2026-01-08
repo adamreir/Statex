@@ -47,7 +47,7 @@ void Table::init(string scalar _name, real scalar _ncols, string scalar _stars, 
 void Table::li() {
 	real scalar i
 	for (i = 1; i <= rows(content); i++) {
-		printf("%s\n", content[i,1])
+		sprintf("%s", content[i,1])
 	}
 }
 
