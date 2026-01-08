@@ -1307,14 +1307,16 @@ prog statex_numbers
 			exit 198
 		}
 		if "`option'"=="none" exit
-		if "`option'"=="noblank" loc noblank="noblank" 
+		if "`option'"=="noblank" loc blank=0
 	}
+	if  "`blank'"=="" loc blank = 1
 	
 	* Syntax
 	********
 	
-	if "`blank'"=="noblank" loc i1 = "1"
-	else 					loc i1 = "2"
+	if `blank' 	loc i1 = "2"
+	else		loc i1 = "1"
+	di "`i1'"
 	
 	* 
 	
@@ -1324,9 +1326,11 @@ prog statex_numbers
 	mata: st_local("n_cols", strofreal(pT->ncols))
 	
 	mata: pT->add_line("")
-	mata: pT->append_to_line(`""', 1, "center")
-	mata: pT->append_to_line(`"&"', 0, "no")
-	forv i=2/`n_cols' {
+	if `blank' {
+		mata: pT->append_to_line(`""', 1, "center")
+		mata: pT->append_to_line(`"&"', 0, "no")
+	}
+	forv i=`i1'/`n_cols' {
 		mata: pT->append_to_line(`"\multicolumn{1}{c}{(`i')}"', 1, "center")
 		mata: pT->append_to_line(`"&"', 0, "no")
 	}
