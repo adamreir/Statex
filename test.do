@@ -49,7 +49,7 @@ set tracedepth 3
 statex midrule
 statex panel, text("A panel")
 //statex est_stats est1 est2, name(Table1) stats(N r2 M)
-statex est est1 est2, label b(%3.2fc) paren(%3.2fc) indicate("Year FE=*.year" "indiv FE=*.id") nogap stat(N r2 M, label("Obs 2" R2 MMmm) format(%12.2fc %12.3fc %12.3fc))
+statex est est1 est2, label b(%3.2fc) paren(%3.2fc) indicate("Year FE=*.year" "indiv FE=*.id") nogap stat(N r2 M, label("Obs 2" R2 MMmm) format(%12.2fc %12.3fc %12.3fc)) numbers(none)
 /*
 statex midrule
 statex panel, text("Another panel")

@@ -259,7 +259,7 @@ prog statex_row
 	if !`has_multicolumn' {
 		loc n = 0
 		if `blank' {
-			mata: pT->append_to_line("",1,"left")
+			mata: pT->append_to_line("",1,"center")
 			loc ++n
 		}
 		
@@ -272,7 +272,8 @@ prog statex_row
 	else {
 		loc n = 0
 		if `blank' {
-			mata: pT->append_to_line("&", 0, "no")
+			mata: pT->append_to_line("",1,"center")
+			loc ++n
 		}
 		
 		
@@ -282,9 +283,10 @@ prog statex_row
 			else 			loc a = "c"
 			if `n'>0 mata: pT->append_to_line("&", 0, "no")
 			mata pT->append_to_line(`"\multicolumn{`n_cols'}{`a'}{`bold_start'`elem'`bold_end'}"',1, "left")
-			loc n = `n'+1
+			loc ++n
 		}
 	}
+	
 	mata: pT->append_to_line(`"\\ "', 0, "no")
 	mata: pT->cell_overflow = 0
 	
@@ -345,7 +347,7 @@ prog statex_est
 	syntax namelist, [name(namelist max=1)]  ///
 	[b(passthru) paren(passthru) stars(passthru)] /// 
 	[indicate(passthru) drop(passthru) keep(passthru) order(passthru) STATistics(passthru)] /// Which variables goes where
-	[label longmidrule nogap] /// Rendition
+	[label longmidrule nogap numbers(passthru)] /// Rendition
 	[noheader notable noindic nostats] // Drop specific part of table
 	
 	* Check that mata object statex exists: 
@@ -403,6 +405,7 @@ prog statex_est
 	
 	if "`header'"!="noheader" {
 		statex_est_header `namelist', name(`name') `label' `bold'
+		statex_numbers, `numbers'
 		statex_midrule, name(`name')
 	}
 	
@@ -1288,6 +1291,46 @@ prog statex_midrule
 	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	mata: pT->add_line("\midrule")
+	
+end
+
+prog statex_numbers 
+	syntax, [name(namelist max=1) noblank numbers(string asis)]
+	
+	// Manual parsing
+	while `"`numbers'"'!="" {
+		gettoken option numbers : numbers
+		di "						{bf: parse option numbers - now `option'}"
+		cap assert inlist(`"`option'"', "none", "noblank")
+		if _rc {
+			di as error `"Statex numbers did not recognize option `opt'"'
+			exit 198
+		}
+		if "`option'"=="none" exit
+		if "`option'"=="noblank" loc noblank="noblank" 
+	}
+	
+	* Syntax
+	********
+	
+	if "`blank'"=="noblank" loc i1 = "1"
+	else 					loc i1 = "2"
+	
+	* 
+	
+	if "`name'"=="" mata: st_local("name", statex.get_current())
+	mata: pT = statex.get_table("`name'")
+	
+	mata: st_local("n_cols", strofreal(pT->ncols))
+	
+	mata: pT->add_line("")
+	mata: pT->append_to_line(`""', 1, "center")
+	mata: pT->append_to_line(`"&"', 0, "no")
+	forv i=2/`n_cols' {
+		mata: pT->append_to_line(`"\multicolumn{1}{c}{(`i')}"', 1, "center")
+		mata: pT->append_to_line(`"&"', 0, "no")
+	}
+	mata: pT->append_to_line(`"\\"', 0, "no")
 	
 end
 
