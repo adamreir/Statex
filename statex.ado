@@ -156,7 +156,7 @@ end
 prog statex_row
 	syntax, ///
 		[name(namelist max=1)] ///
-		row(string asis) [multicolumn(numlist integer min=1) noblank align(string) underline(string asis) bold]
+		row(string asis) [multicolumn(numlist integer min=1) noblank align(string) underline(string asis) bold cmidrule(string asis)]
 	
 	* Check that mata object statex exists: 
 	***************************************
@@ -199,6 +199,8 @@ prog statex_row
 			exit 198
 		}
 	}
+	
+	* Flag: Check cmidrule spec. 
 	
 	// If multicolumn: n in row same as multicol, and sum(multicol)==n columns
 	if `has_multicolumn' {
@@ -287,12 +289,12 @@ prog statex_row
 		}
 	}
 	
-	mata: pT->append_to_line(`"\\ "', 0, "no")
+	mata: pT->append_to_line(`" \\"', 0, "no")
 	mata: pT->cell_overflow = 0
 	
-	loc has_midrule = `"`midrule'"'!=""
-	if `has_midrule' {
-		foreach lr of local midrule {
+	
+	if `"`cmidrule'"'!="" {
+		foreach lr of local cmidrule {
 			gettoken l r : lr
 			loc l: list clean l
 			loc r: list clean r
@@ -301,7 +303,8 @@ prog statex_row
 				di as error `"midrule must consists of lists of numbers, received `l'-`r'"' // Flag: move this code up to the beguinning of the program
 			}
 			
-			pT->append_to_line(`" \cmidrule(lr){`l'-`r'} "',0, "no")
+			di `"`l'-`r'"'
+			mata: pT->append_to_line(`" \cmidrule(lr){`l'-`r'} "',0, "no")
 		}
 	}
 end
@@ -347,7 +350,7 @@ prog statex_est
 	syntax namelist, [name(namelist max=1)]  ///
 	[b(passthru) paren(passthru) stars(passthru)] /// 
 	[indicate(passthru) drop(passthru) keep(passthru) order(passthru) STATistics(passthru)] /// Which variables goes where
-	[label longmidrule nogap numbers(passthru)] /// Rendition
+	[label longmidrule nogap numbers(passthru) nogroup] /// Rendition
 	[noheader notable noindic nostats] // Drop specific part of table
 	
 	* Check that mata object statex exists: 
@@ -404,7 +407,7 @@ prog statex_est
 	*************
 	
 	if "`header'"!="noheader" {
-		statex_est_header `namelist', name(`name') `label' `bold'
+		statex_est_header `namelist', name(`name') `label' `bold' `group'
 		statex_numbers, `numbers'
 		statex_midrule, name(`name')
 	}
@@ -725,7 +728,7 @@ end
 
 // FLAG: add options (bold, label). Also add group to group yvars (with cmidrule)
 prog statex_est_header
-	syntax namelist, [name(string) bold label]
+	syntax namelist, [name(string) bold label nogroup]
 	
 	* Syntax
 	********
@@ -733,20 +736,57 @@ prog statex_est_header
 	//mata: pT = statex.get_table("`name'")
 	//mata: st_local("ncols_statex", strofreal(pT->ncols))
 	
-	* Write 
-	********
-		
+	* Loop over estimates, and group identical consequtive y-vars 
+	**************************************************************
+	
+	loc n_obj = 1
+	loc first = 1
+	loc start = 2
+	loc i = 2
 	foreach est of local namelist {
 		qui estimates restore `est'
 		loc y `e(depvar)'
-		cap if "`label'"!="" 	loc ylab : variable label `y' // cap in case the variable is not defined
-		if "`ylab'"==""		loc ylab = "`y'"
-		loc yrow = `"`yrow' "`ylab'""'
-		loc align = "`align' c"
-		loc multicolumn = "`multicolumn' 1"
+		
+		// Parse similar
+		if `"`y'"'==`"`prev'"' & "`group'"!="nogroup" {
+			loc ++n_obj
+		}
+		else {
+			if (`"`prev'"'!="" | "`group'"=="nogroup") & !`first' {
+				if `first' 	loc target = `"`y'"'
+				else 		loc target = `"`prev'"'
+				cap if "`label'"!="" 	loc ylab : variable label `target'
+				if "`ylab'"==""			loc ylab = `"`target'"'
+				
+				loc yrow = `"`yrow' "`ylab'""'
+				loc align = "`align' c"
+				loc multicolumn = "`multicolumn' `n_obj'"
+				loc midrule = `"`midrule' "`start' `=`i'-1'""'
+				loc start = "`i'"
+			}
+			loc prev = `"`y'"'
+			loc n_obj=1
+		}
+		loc first = 0
+		loc ++i
 	}
-
-	statex row, row(`yrow') `bold' align(`align') name(`name') multicolumn(`multicolumn')
+	
+	cap if "`label'"!="" 	loc ylab : variable label `prev'
+	if "`ylab'"==""			loc ylab = `"`prev'"'
+	loc yrow = `"`yrow' "`ylab'""'
+	loc align = "`align' c"
+	loc multicolumn = "`multicolumn' `n_obj'"
+	loc midrule = `"`midrule' "`start' `=`i'-1'""'
+			
+	foreach loc in yrow align multicolumn {
+		loc `loc' = substr(`"``loc''"', 2, .)
+	}
+	
+	* Write 
+	********
+	if "`group'"=="nogroup" loc midrule = ""
+	di `"statex row, name(`name') row(`yrow') `bold' align(`align')  multicolumn(`multicolumn') cmidrule(`midrule')"'
+	statex row, name(`name') row(`yrow') `bold' align(`align')  multicolumn(`multicolumn') cmidrule(`midrule')
 	
 end
 
