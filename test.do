@@ -29,9 +29,11 @@ lab var x1 "X1"
 //set trace on
 set tracedepth 2
 
+g omit = 0
+
 eststo est1: qui reghdfe y x1 x2, absorb(i.year i.id)
-estadd scalar M = 123
-eststo est2: qui reghdfe y x1	year	, absorb(i.year i.id) 
+estadd scalar M = 123 
+eststo est2:  reghdfe y x1 c.omit#c.year  	year	, absorb(i.year i.id) 
 
 //statex est_extract est1 est2, indicate("Xs=x?", indicators("yes" "no"))
 //frame __table_res: li
@@ -41,7 +43,7 @@ eststo est2: qui reghdfe y x1	year	, absorb(i.year i.id)
 
 
 
-set trace on 
+//set trace on 
 set tracedepth 3
 
 statex midrule

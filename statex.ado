@@ -590,92 +590,94 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		loc n = colsof(b)
 		forv i = 1/`n' {
 			loc varname : word `i' of `varnames'
-			if substr("`varname'", 1, 2)=="o."  loc clean_varname = substr(`"`varname'"', 3, .)
-			if substr("`varname'", 1, 3)=="co." loc clean_varname = substr(`"`varname'"', 4, .)
 			
-			//if substr("`varname'",1,2)!="o." {
-				
-				// Check if `varname' is in `indicate'?
-                local in_indicate = 0
-				frame `indframe': qui levelsof varlist, local(indicated)
-				foreach pat of local indicated {
-					if strmatch("`varname'", `"`pat'"') local in_indicate = 1
-				}
-				
-				if `in_indicate'==0 { // Include parameter
-					// Make clean version of variable and label	
-					loc dropped = 0				
-					loc rest = "`varname'"
-					loc clean_varlist = ""
-					loc clean_label = ""
-					while `"`rest'"'!="" {
-						gettoken tok rest : rest, parse("#")
-						if "`tok'"=="#" {
-							loc clean_varlist = "`clean_varlist' # "
-							loc clean_label   = "`clean_label' # "
+			//if substr("`varname'", 1, 2)=="o."  loc varname = substr(`"`varname'"', 3, .)
+			//if substr("`varname'", 1, 3)=="co." loc varname = substr(`"`varname'"', 4, .)
+			
+			// Check if `varname' is in `indicate'
+			local in_indicate = 0
+			frame `indframe': qui levelsof varlist, local(indicated)
+			foreach pat of local indicated {
+				if strmatch("`varname'", `"`pat'"') local in_indicate = 1
+			}
+			
+			if `in_indicate'==0 { // Include parameter
+				// Make clean version of variable and label	
+				loc dropped = 0				
+				loc rest = "`varname'"
+				loc var = ""
+				loc clean_varlist = ""
+				loc clean_label = ""
+				while `"`rest'"'!="" {
+					gettoken tok rest : rest, parse("#")
+					if "`tok'"=="#" {
+						loc var           = "`var'#"
+						loc clean_varlist = "`clean_varlist' # "
+						loc clean_label   = "`clean_label' # "
+					}
+					else {
+						if substr("`tok'", 1, 2)=="o." | substr("`tok'", 1, 3)=="co." loc dropped = 1
+						foreach pat in "c." "o." "co." {
+							loc pat_n = strlen("`pat'")
+							loc tok = cond(substr("`tok'",1,`pat_n')=="`pat'", substr("`tok'", `=`pat_n'+1',.), "`tok'")
+							
+							loc lab = ""
+							cap loc lab : variable label `tok'
+							if `"`tok'"'=="_cons" 	loc lab = "Constant"
+							if `"`lab'"'=="" 		loc lab = "`tok'"
 						}
-						else {
-							if substr("`tok'", 1, 2)=="o." | substr("`tok'", 1, 3)=="co." loc dropped = 1
-							foreach pat in "c." "o." "co." {
-								loc pat_n = strlen("`pat'")
-								loc tok = cond(substr("`tok'",1,`pat_n')=="`pat'", substr("`tok'", `=`pat_n'+1',.), "`tok'")
-								
-								loc lab = ""
-								cap loc lab : variable label `tok'
-								if `"`tok'"'=="_cons" 	loc lab = "Constant"
-								if `"`lab'"'=="" 		loc lab = "`tok'"
-							}
-							loc clean_varlist = "`clean_varlist'`tok'"
-							loc clean_label = "`clean_label'`lab'"
-						}
+						loc var = "`var'`tok'"
+						loc clean_varlist = "`clean_varlist'`tok'"
+						loc clean_label = "`clean_label'`lab'"
 					}
-					
-					
-					loc b = b[1,`i']
-					loc se = sqrt(V[`i', `i'])
-					loc t = `b'/`se'
-												
-					// Use critical values from t-statistic unless there are many dfs to calculate p-values and CIs (following estout convention)
-					loc df_max = 2e17
-					loc level_dec = (100-`ci_level')/(2*100)
-					if !mi(`df_r') & `df_r'<=`df_max' { // t
-						loc p = 2 * ttail(`df_r', abs(`t'))
-						loc crit = invttail(`df_r', `level_dec')
-					}
-					else { // norm
-						loc p = 2 * normal(-abs(`t'))
-						loc crit = invnormal(`level_dec')
-					}
-					
-					loc ci_l = `b' - `crit'*`se'
-					loc ci_u = `b' + `crit'*`se'
+				}
 				
-					frame `estframe' {
-							qui count if clean_varlist == "`clean_varlist'"
-							if r(N)==0 {
-								qui set obs `=_N+1'
-								qui replace varlist = "`varname'" if _n==_N
-								qui replace clean_varlist = "`clean_varlist'" if _n==_N
-								qui replace clean_label = "`clean_label'" if _n==_N
-							}
-							if `dropped' {
-								foreach param in b se t p ci_l ci_u {
-									loc `param' = .
-								}
-							}
-							qui replace in`column' = 1    if varlist=="`varname'"
-							qui replace b`column'  = `b'  if varlist=="`varname'"
-							qui replace se`column' = `se' if varlist=="`varname'"
-							qui replace t`column'  = `t'  if varlist=="`varname'"
-							qui replace p`column'  = `p'  if varlist=="`varname'"
-							qui replace ci_l`column' = `ci_l' if varlist=="`varname'"
-							qui replace ci_u`column' = `ci_u' if varlist=="`varname'"
-					}
+				
+				loc b = b[1,`i']
+				loc se = sqrt(V[`i', `i'])
+				loc t = `b'/`se'
+											
+				// Use critical values from t-statistic unless there are many dfs to calculate p-values and CIs (following estout convention)
+				loc df_max = 2e17
+				loc level_dec = (100-`ci_level')/(2*100)
+				if !mi(`df_r') & `df_r'<=`df_max' { // t
+					loc p = 2 * ttail(`df_r', abs(`t'))
+					loc crit = invttail(`df_r', `level_dec')
 				}
-				else { // Include indicator
-					frame `indframe': qui replace fe`column'=1 if strmatch("`varname'", varlist)
+				else { // norm
+					loc p = 2 * normal(-abs(`t'))
+					loc crit = invnormal(`level_dec')
 				}
-			//}
+				
+				loc ci_l = `b' - `crit'*`se'
+				loc ci_u = `b' + `crit'*`se'
+			
+				frame `estframe' {
+						qui count if clean_varlist == "`clean_varlist'"
+						if r(N)==0 {
+							qui set obs `=_N+1'
+							di "`var'"
+							qui replace varlist = "`var'" if _n==_N
+							qui replace clean_varlist = "`clean_varlist'" if _n==_N
+							qui replace clean_label = "`clean_label'" if _n==_N
+						}
+						if `dropped' {
+							foreach param in b se t p ci_l ci_u {
+								loc `param' = .
+							}
+						}
+						qui replace in`column' = 1    if varlist=="`varname'"
+						qui replace b`column'  = `b'  if varlist=="`varname'"
+						qui replace se`column' = `se' if varlist=="`varname'"
+						qui replace t`column'  = `t'  if varlist=="`varname'"
+						qui replace p`column'  = `p'  if varlist=="`varname'"
+						qui replace ci_l`column' = `ci_l' if varlist=="`varname'"
+						qui replace ci_u`column' = `ci_u' if varlist=="`varname'"
+				}
+			}
+			else { // Include indicator
+				frame `indframe': qui replace fe`column'=1 if strmatch("`varname'", varlist)
+			}
 		}
 		
 		* Absorbed FEs
@@ -871,13 +873,9 @@ prog statex_est_stats
 	}
 	* Write table
 	*************
-	
-	di `"`stats'"'
-	di `"format: `format'"'
-	di `"label: `label'"'
+
 	loc n = 1
 	foreach stat of local stats {
-		di "stat: `stat'"
 		if `n'>1 mata: pT->add_line("")
 		loc n = `n'+1
 		
@@ -907,7 +905,6 @@ prog statex_est_stats
 		
 		foreach est of local estnames {
 			qui estimates restore `est'
-			di "stat*: `stat'"
 			loc value = e(`stat')
 			if `value'==. loc value = ""
 			if "`value'"!="" loc value = string(`value', "`fmt'")
