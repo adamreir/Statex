@@ -669,13 +669,13 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 								loc `param' = .
 							}
 						}
-						qui replace in`column' = 1    if varlist=="`varname'"
-						qui replace b`column'  = `b'  if varlist=="`varname'"
-						qui replace se`column' = `se' if varlist=="`varname'"
-						qui replace t`column'  = `t'  if varlist=="`varname'"
-						qui replace p`column'  = `p'  if varlist=="`varname'"
-						qui replace ci_l`column' = `ci_l' if varlist=="`varname'"
-						qui replace ci_u`column' = `ci_u' if varlist=="`varname'"
+						qui replace in`column' = 1    if varlist=="`var'"
+						qui replace b`column'  = `b'  if varlist=="`var'"
+						qui replace se`column' = `se' if varlist=="`var'"
+						qui replace t`column'  = `t'  if varlist=="`var'"
+						qui replace p`column'  = `p'  if varlist=="`var'"
+						qui replace ci_l`column' = `ci_l' if varlist=="`var'"
+						qui replace ci_u`column' = `ci_u' if varlist=="`var'"
 				}
 			}
 			else { // Include indicator
