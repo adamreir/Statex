@@ -9,17 +9,30 @@ adopath + "C:/Users/`=c(username)'/Documents/GitHub/Statex"
 do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.ado"
 
-statex new, n_cols(3) paren("ci")
-statex drop
-statex new, n_cols(3) paren("ci")
 
-mata: pT = statex.get_table("Table2")
+
+statex new, n_cols(3) paren("ci")
+statex new, n_cols(3) paren("ci")
+statex new, n_cols(3) paren("ci")
+statex new, n_cols(3) paren("ci")
 
 statex dir
-statex change, name(Table1)
+statex drop _all
 statex dir
 
-mata: pT->paren
+mata: 
+
+mata: 
+
+pT = statex.get_table("Table2")
+pT
+statex.drop_table((*pT))
+
+
+end
+
+
+mata: pT = statex.get_table("Table1")
 
 clear
 set obs 20000
@@ -50,10 +63,12 @@ set tracedepth 4
 
 statex midrule
 statex panel, text("A panel")
-statex est est1 est2, label b(%10.9fc) paren(none)  
+statex est est1 est2, label b(%3.2fc) indicate("Year FE=*year") noindic 
 statex midrule
 statex panel, text("Another panel")
-statex est est1 est2, label b(%3.2fc) longmidrule indicate("Year FE=*year") noheader //se(%3.2fc) 
+statex est est1 est2, label b(%3.2fc) indicate("Year FE=*year") noindic //se(%3.2fc)
+statex panel, text("Fixed Effects")
+statex est est1 est2, indicate("Year FE=*year") noheader notable nostats
 statex close, robust
 statex list
 

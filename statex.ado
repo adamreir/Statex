@@ -96,7 +96,7 @@ prog statex_list
 	***************************************
 	statex_assert_mata, exit
 	
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	mata: pT->li()
 end
@@ -122,18 +122,28 @@ prog statex_change
 end
 
 prog statex_drop
-	syntax, [name(string)]
+	syntax namelist
 	* Check that mata object statex exists: 
 	***************************************
 	statex_assert_mata
 	
 	*
 	************
-	if "`name'"=="" mata: _ = statex.get_current()
-	mata: pT = statex.get_table("`name'")
-	mata: statex.drop_table(pT)
+	if "`namelist'"!="_all" {
+		foreach name of local namelist {
+			di "`name'"
+			if "`name'"=="" mata: st_local("name", statex.get_current())
+			mata: pT = statex.get_table("`name'")
+			mata: statex.drop_table(pT)
+		}
+	}
+	else {
+		mata: statex.drop_all()
+	}
 	
 end
+
+
 
 ********************************************************************************
 *********************************** Header / row *******************************
@@ -150,7 +160,7 @@ prog statex_row
 	
 	* Name
 	******
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	mata: pT->add_line("")
 	
@@ -312,7 +322,7 @@ prog statex_panel
 	// Prepare text for LaTeX
 	
 	
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	mata: pT->panel()
 	mata: st_local("ncols", strofreal(pT->ncols))
@@ -328,8 +338,16 @@ end
 ***********
 
 prog statex_est
-	syntax namelist, [name(namelist max=1)]  [label] [b(passthru) paren(passthru)] [stat(string) nostats absorbed(string asis) drop(passthru) keep(passthru) order(passthru) longmidrule stars(passthru)] ///
-	[indicate(passthru)] [noheader]
+	syntax namelist, [name(namelist max=1)]  ///
+	[b(passthru) paren(passthru)] /// Construction of main table
+	[indicate(passthru) drop(passthru) keep(passthru) order(passthru)] /// Which variables goes where
+	[label stat(string) longmidrule stars(passthru)] ///
+	[noheader notable noindic nostats] // Drop specific part of table
+	
+	foreach loc in header table stats {
+		di "`loc': ``loc''"
+		di "no`loc': `no`loc''"
+	}
 	
 	* Check that mata object statex exists: 
 	***************************************
@@ -338,7 +356,7 @@ prog statex_est
 	* Syntax
 	********
 	// Table is open
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	
 	if "`longmidrule'"!="" {
@@ -384,38 +402,44 @@ prog statex_est
 	* Write table
 	*************
 	
-	if "`header'"=="" {
+	if "`header'"!="noheader" {
 		statex_est_header `namelist', name(`name') `label' `bold'
-		statex_midrule, name("`name'")
+		statex_midrule, name(`name')
 	}
 	
-	cap frame drop __table_res
-	frame create __table_res
-	frame __table_res: qui g strL varlist = ""
-	frame __table_res: qui g strL clean_varlist = ""
-	frame __table_res: qui g strL clean_label = ""
-	
-	cap frame drop __table_indicate
-    frame create __table_indicate
-    frame __table_indicate: qui gen strL varlist = ""
-	frame __table_indicate: qui gen strL label = ""
+	cap frame drop estframe
+	loc estframe = "estframe"
+	cap frame drop indframe
+	loc indframe = "indframe"
 	
 	/*
 	tempname estframe indframe
 	*/
 	
-	// Move est. to frame
+	frame create `estframe'
+	frame `estframe': qui g strL varlist = ""
+	frame `estframe': qui g strL clean_varlist = ""
+	frame `estframe': qui g strL clean_label = ""
 	
-	statex_est_prepare `namelist',  `label' name(`name') `drop' `keep' `order' estframe(__table_res) indframe(__table_indicate) `indicate'
+	frame create `indframe'
+    frame `indframe': qui gen strL varlist = ""
+	frame `indframe': qui gen strL label = ""
 	
-	// export to latex file. 
+	
+	// Move estimates to frames
+	statex_est_prepare `namelist',  `label' name(`name') `drop' `keep' `order' estframe(`estframe') indframe(`indframe') `indicate'
+	
+	// append to latex table 
 	loc n_cols : list sizeof namelist
-	statex_est_write, n_cols(`n_cols') name(`name') `b' `paren' `stars' estframe(__table_res) indframe(__table_indicate)
+	if "`table'"!="notable" statex_est_panel, n_cols(`n_cols') name(`name') `b' `paren' `stars' estframe(`estframe')
+	if "`indic'"!="noindic" statex_est_indic, name(`name') n_cols(`n_cols') indframe(`indframe')
 	
-	if "`nostats'"=="" {
+	
+	if "`stats'"!="nostats" {
 		if "`longmidrule'"!="" statex_midrule, name(`name')
 		else mata: pT->append_to_line(`" \cmidrule(lr){2-`ncols'}"', 0, "no")
 		mata: pT->add_line("")
+		
 		// Pars stats options by splitting at first comma (if it exists)
 		// i.e. stats(a b c, fmt(%9.0fc)) -> stats_main_opt = "a b c" & stats_other_opt = "fmt(%9.0fc)"
 		//if `"`stat'"'=="" loc stat = ""
@@ -437,7 +461,7 @@ prog statex_est_prepare
 	
 	* Syntax
 	********
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	mata: st_local("ncols_statex", strofreal(pT->ncols))
 	
@@ -538,12 +562,10 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 			loc lab = strtrim(substr(`"`var_lab'"', 1, `epos' - 1))
 			loc var = strtrim(substr(`"`var_lab'"', `epos' + 1,.))
 		}
-		di `"`var_lab': `var' - `lab'"'
-		di "`indframe'"
 		frame `indframe' {
-			set obs `=_N+1'
-			replace varlist = "`var'" if _n==_N
-			replace label = "`lab'" if _n==_N
+			qui set obs `=_N+1'
+			qui replace varlist = "`var'" if _n==_N
+			qui replace label = "`lab'" if _n==_N
 		}
 	}
 	
@@ -706,7 +728,7 @@ prog statex_est_header
 	
 	* Syntax
 	********
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	//mata: pT = statex.get_table("`name'")
 	//mata: st_local("ncols_statex", strofreal(pT->ncols))
 	
@@ -727,10 +749,8 @@ prog statex_est_header
 	
 end
 
-
-
-prog statex_est_write
-	syntax, name(string) [stars(string)] n_cols(integer) b(string) paren(string) estframe(string asis) indframe(string asis) //se(string)
+prog statex_est_panel
+	syntax, name(string) [stars(string)] n_cols(integer) b(string) paren(string) estframe(string asis) //indframe(string asis)
 	// Reads params from frame and writes to table. 
 	
 	mata: pT = statex.get_table("`name'")
@@ -800,6 +820,10 @@ prog statex_est_write
 		if `row_i'!=`n_vars' mata: pT->add_line(`""')
 		//else 				 mata: pT->add_line(`""')
 	}
+end
+
+prog statex_est_indic
+	syntax, name(string) n_cols(integer) indframe(string asis)
 	
 	// Write indicators
 	frame `indframe': loc n_indics = _N
@@ -812,21 +836,21 @@ prog statex_est_write
 		forv col_i = 1/`n_cols' {
 			frame `indframe': loc has = fe`col_i'[`row_i'] == 1
 			mata pT->append_to_line(`"&"', 0, "no")
-			if `has' 	mata pT->append_to_line(`"\checkbox"', 1, "center")
+			if `has' 	mata pT->append_to_line(`"\checkmark"', 1, "center")
 			else 		mata pT->append_to_line(`""', 1, "center")
 		}
 		mata: pT->append_to_line(`"\\"', 0, "no")
 	}
 end
 
-program statex_est_stats
+prog statex_est_stats
 	syntax namelist, name(namelist max=1) [stats(namelist) format(string) labels(string)]
 	// Add regression statistics (N observations etc.)
 	
 	* Syntax
 	********
 	// Table is open
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	
 	if "`label'"!=""  	loc option_label  = 1
@@ -893,7 +917,7 @@ prog statex_mat
 	* Syntax
 	********
 	// Table is open
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	mata: st_local("ncols_statex", strofreal(pT->ncols))
 	
@@ -1075,7 +1099,7 @@ prog statex_from_data
 	* Syntax
 	********
 	// Table is open
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 end
 
 
@@ -1102,7 +1126,7 @@ prog statex_footer
 	
 	* Syntax
 	********
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	
 	cap assert `"`robust'"'=="" | `"`cluster'"'=="" 
@@ -1159,7 +1183,7 @@ end
 
 
 prog statex_close
-	syntax, [name(namelist max=1) /stars robust cluster(passthru) custom(passthru)]
+	syntax, [name(namelist max=1) stars robust cluster(passthru) custom(passthru)]
 	
 	* Check that mata object statex exists: 
 	***************************************
@@ -1168,7 +1192,7 @@ prog statex_close
 	* Syntax
 	********
 	// Table is open
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	
 	/*
@@ -1224,7 +1248,7 @@ prog statex_save
 	
 	* Get Table object: 
 	
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	
 	* Write to file
@@ -1251,7 +1275,7 @@ prog statex_midrule
 	***************************************
 	statex_assert_mata, exit
 
-	if "`name'"=="" mata: _ = statex.get_current()
+	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	mata: pT->add_line("\midrule")
 	
@@ -1265,10 +1289,10 @@ include "statex.mata", adopath
 
 prog statex_assert_mata
 	syntax, [exit]
-	/*
+	
 	cap mata: statex 
 	if _rc {
-		di as error `"{it:statex}: Mata object "statex" missing. Did you run "mata: mata clear"?. Reinitializing. Note that all data is lost."'
+		di as error `"{it:statex}: Mata object "statex" missing. Did you run "mata: mata clear"?. Reinitializing. Note that all table data is lost."'
 		//mata: statex = Statex()
 		//mata: statex.init()
 		qui findfile statex.mata
@@ -1276,6 +1300,5 @@ prog statex_assert_mata
 		
 		if "`exit'"=="exit" exit 349
 	}
-	*/
 	
 end

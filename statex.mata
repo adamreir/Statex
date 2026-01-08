@@ -138,8 +138,6 @@ real scalar Table::write_table(string scalar filename) {
 
 end
 
-
-
 **************************
 * Global Statex Class Def*
 **************************
@@ -149,26 +147,27 @@ cap mata: mata drop Statex()
 mata: 
 class Statex {
 	// Data
-	string scalar current //private
-	real scalar auto_counter //private
-	pointer(class Table) vector tables //private
+	string scalar current
+	real scalar auto_counter
+	pointer(class Table) vector tables
 	
 	void init() //public
 	
 	// Add delete etc.
-	pointer scalar add_table() //public
+	pointer scalar add_table()
 	void drop_table()
+	void drop_all()
 	
 	// Table management
-	void dir() //public
-	void confirm_noexist() //private?
-	void confirm_name_exists() //public
-	pointer scalar get_table() //public
+	void dir()
+	void confirm_noexist() 
+	void confirm_name_exists()
+	pointer scalar get_table()
 	
 	// Current table etc. 
-	string scalar get_current() //public
-	void set_current() //public
-	void get_auto_newname() //public -> place result in local and increment
+	string scalar get_current()
+	void set_current()
+	void get_auto_newname()
 }
 
 void Statex::init() {
@@ -219,6 +218,19 @@ void Statex::drop_table(pointer(real) scalar pT) {
 	return
 }
 
+void Statex::drop_all() {
+	real scalar i
+	pointer(real) scalar pT
+	
+	// Replace with NULL pointers and replace pointer vector with an empty vector
+	for (i=1; i<=rows(tables); i++) {
+		tables[i,1] = NULL
+	}
+	tables = J(0,1,NULL)
+	
+}
+
+
 // Look for names
 void Statex::confirm_noexist(string scalar _name) {
 	real scalar i
@@ -261,7 +273,6 @@ string scalar Statex::get_current() {
 		_error(111, "No current table set. Run 'help statex_manage' for more information.")
 		return("")
 	}
-	st_local("name", current)
 	return(current)
 }
 
