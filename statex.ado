@@ -608,8 +608,6 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 				frame `indframe': qui levelsof varlist, local(indicated)
 				foreach pat of local indicated {
 					if strmatch("`clean_varname'", `"`pat'"') local in_indicate = 1
-							di `"Compare `clean_varname' and `pat'"'
-							di `in_indicate'
 				}
 				
 				if `in_indicate'==0 { // Include parameter
