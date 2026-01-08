@@ -570,6 +570,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 	foreach est of local namelist {
 		
 		frame `estframe' {
+			qui g in`column' = .
 			qui g double b`column' = .
 			qui g double se`column' = .
 			qui g double t`column' = .
@@ -595,13 +596,20 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		loc n = colsof(b)
 		forv i = 1/`n' {
 			loc varname : word `i' of `varnames'
+			
+			loc clean_varname = `"`varname'"'
+			if substr("`clean_varname'", 1, 2)=="o." loc clean_varname = substr(`"`varname'"', 3, .)
+			if substr("`clean_varname'", 1, 3)=="co." loc clean_varname = substr(`"`varname'"', 4, .)
+			
 			//if substr("`varname'",1,2)!="o." {
 				
 				// Check if `varname' is in `indicate'?
                 local in_indicate = 0
 				frame `indframe': qui levelsof varlist, local(indicated)
 				foreach pat of local indicated {
-					if strmatch("`varname'", `"`pat'"') local in_indicate = 1
+					if strmatch("`clean_varname'", `"`pat'"') local in_indicate = 1
+							di `"Compare `clean_varname' and `pat'"'
+							di `in_indicate'
 				}
 				
 				if `in_indicate'==0 { // Include parameter
@@ -665,6 +673,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 									loc `param' = .
 								}
 							}
+							qui replace in`column' = 1    if varlist=="`varname'"
 							qui replace b`column'  = `b'  if varlist=="`varname'"
 							qui replace se`column' = `se' if varlist=="`varname'"
 							qui replace t`column'  = `t'  if varlist=="`varname'"
@@ -766,6 +775,7 @@ prog statex_est_panel
 		
 		forv col_i = 1/`n_cols' {	
 			frame `estframe': loc __b = b`col_i'[`row_i']
+			frame `estframe': loc __in = in`col_i'[`row_i']
 			loc __b = strofreal(`__b', "`b'")
 			
 			if "`stars'"!="none" {
@@ -777,8 +787,12 @@ prog statex_est_panel
 			}
 			
 			mata pT->append_to_line(`"&"', 0, "no")
+			/*
 			if `__b'!=.		mata pT->append_to_line(`"`__b'`__stars'"', 1, "center")
 			else			mata pT->append_to_line(`"."', 1, "center")
+			*/
+			if `__in'==1	mata pT->append_to_line(`"`__b'`__stars'"', 1, "center")
+			else			mata pT->append_to_line(`" "', 1, "center")
 		}
 		mata: pT->append_to_line(`"\\ "', 0, "no")
 		
@@ -790,11 +804,12 @@ prog statex_est_panel
 			mata pT->append_to_line("", 1, "left")
 			
 
-			forv col_i = 1/`n_cols' {			
+			forv col_i = 1/`n_cols' {	
+				frame `estframe': loc __in = in`col_i'[`row_i']
 				if "`in_paren'"!="ci" {
 					frame `estframe': loc paren_content = `in_paren'`col_i'[`row_i']
 					loc paren_content = strofreal(`paren_content', "`paren'")
-					loc has_paren_content = !mi(`paren_content')
+					//loc has_paren_content = !mi(`paren_content')
 				}
 				else {
 					frame `estframe': loc ci_l = ci_l`col_i'[`row_i']
@@ -806,8 +821,8 @@ prog statex_est_panel
 				}
 				
 				mata pT->append_to_line(`"&"', 0, "no")
-				if `has_paren_content' 	mata pT->append_to_line(`"(`paren_content')"', 1, "center")
-				else 					mata pT->append_to_line(`""', 1, "center")
+				if `__in'==1 	mata pT->append_to_line(`"(`paren_content')"', 1, "center")
+				else 			mata pT->append_to_line(`" "', 1, "center")
 			}
 			
 			mata: pT->append_to_line(`"\\"', 0, "no")

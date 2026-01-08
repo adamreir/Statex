@@ -30,9 +30,9 @@ lab var x1 "X1"
 //set trace on
 set tracedepth 2
 
-eststo est1: qui reghdfe y x1 x2 i.year i.id
+eststo est1: qui reghdfe y x1 x2, absorb(i.year i.id)
 estadd scalar M = 123
-eststo est2: qui reghdfe y x1			, absorb(i.year i.id) 
+eststo est2: qui reghdfe y x1	year	, absorb(i.year i.id) 
 
 //statex est_extract est1 est2, indicate("Xs=x?", indicators("yes" "no"))
 //frame __table_res: li
@@ -47,7 +47,7 @@ set tracedepth 4
 
 statex midrule
 statex panel, text("A panel")
-statex est est1 est2, label b(%3.2fc) indicate("Year FE=*year" "indiv FE=*.id") nogap
+statex est est1 est2, label b(%3.2fc) indicate("Year FE=*.year" "indiv FE=*.id") nogap
 /*
 statex midrule
 statex panel, text("Another panel")
