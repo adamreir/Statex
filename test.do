@@ -12,9 +12,8 @@ adopath + "${statex}"
 do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.ado"
 
-
-
 statex new, n_cols(3) paren("se")
+
 
 clear
 set obs 20000
@@ -42,12 +41,13 @@ eststo est2: qui reghdfe y x1	year	, absorb(i.year i.id)
 
 
 
-//set trace on 
-set tracedepth 4
+set trace on 
+set tracedepth 3
 
 statex midrule
 statex panel, text("A panel")
-statex est est1 est2, label b(%3.2fc) paren(%3.2fc) indicate("Year FE=*.year" "indiv FE=*.id") nogap
+//statex est_stats est1 est2, name(Table1) stats(N r2 M)
+statex est est1 est2, label b(%3.2fc) paren(%3.2fc) indicate("Year FE=*.year" "indiv FE=*.id") nogap stat(N r2 M, label("Obs 2" R2 MMmm) format(%12.2fc %12.3fc %12.3fc))
 /*
 statex midrule
 statex panel, text("Another panel")
@@ -56,7 +56,7 @@ statex panel, text("Just Fixed Effects")
 statex est est1 est2, indicate("Year FE=*year") noheader notable nostats
 */
 
-statex close, footer(robust custom(`"A custom footer"' a nother))
+//statex close, footer(robust custom(`"A custom footer"' a nother))
 
 
 statex list

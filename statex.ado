@@ -122,7 +122,7 @@ prog statex_change
 end
 
 prog statex_drop
-	syntax namelist
+	syntax [namelist]
 	* Check that mata object statex exists: 
 	***************************************
 	statex_assert_mata
@@ -141,6 +141,10 @@ prog statex_drop
 		mata: statex.drop_all()
 	}
 	
+end
+
+prog statex_clear 
+	statex_drop _all
 end
 
 
@@ -340,7 +344,7 @@ end
 prog statex_est
 	syntax namelist, [name(namelist max=1)]  ///
 	[b(passthru) paren(passthru) stars(passthru)] /// 
-	[indicate(passthru) drop(passthru) keep(passthru) order(passthru) stat(string)] /// Which variables goes where
+	[indicate(passthru) drop(passthru) keep(passthru) order(passthru) STATistics(passthru)] /// Which variables goes where
 	[label longmidrule nogap] /// Rendition
 	[noheader notable noindic nostats] // Drop specific part of table
 	
@@ -425,9 +429,8 @@ prog statex_est
 	statex_est_prepare `namelist',  `label' name(`name') `drop' `keep' `order' estframe(`estframe') indframe(`indframe') `indicate'
 	
 	// append to latex table 
-		di `"statex_est_panel, n_cols(`n_cols') name(`name') `b' `paren' `stars' estframe(`estframe') `gap'"'
 	loc n_cols : list sizeof namelist
-	if "`table'"!="notable" statex_est_panel, n_cols(`n_cols') name(`name') `b' `paren' `stars' estframe(`estframe') `gap'
+	if "`table'"!="notable" statex_est_panel, name(`name') n_cols(`n_cols') `b' `paren' `stars' estframe(`estframe') `gap'
 	if "`table'"!="notable" & "`indic'"!="noindic" & "`gap'"!="nogap" mata: pT->add_line("[1em]")
 	if "`indic'"!="noindic" statex_est_indic, name(`name') n_cols(`n_cols') indframe(`indframe') `gap'
 	
@@ -436,17 +439,8 @@ prog statex_est
 		if "`longmidrule'"!="" statex_midrule, name(`name')
 		else mata: pT->append_to_line(`" \cmidrule(lr){2-`ncols'}"', 0, "no")
 		mata: pT->add_line("")
-		
-		// Pars stats options by splitting at first comma (if it exists)
-		// i.e. stats(a b c, fmt(%9.0fc)) -> stats_main_opt = "a b c" & stats_other_opt = "fmt(%9.0fc)"
-		//if `"`stat'"'=="" loc stat = ""
-		loc comma_pos = strpos(`"`stat'"', ",")
-		if `comma_pos' {
-			loc stat_main_opt = substr(`"`stat'"', 1, `comma_pos'-1)
-			loc stat_other_opt = substr(`"`stat'"', `comma_pos'+1, .)
-		}
-		else loc stat_main_opt = `"`stat'"'
-		statex_est_stats `namelist', name(`name') stats(`stat_main_opt') `stat_other_opt'
+		di `"statex_est_stats `namelist', name(`name') `statistics'"'
+		statex_est_stats `namelist', name(`name') `statistics'
 	}
 end
 
@@ -596,10 +590,8 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		loc n = colsof(b)
 		forv i = 1/`n' {
 			loc varname : word `i' of `varnames'
-			
-			loc clean_varname = `"`varname'"'
-			if substr("`clean_varname'", 1, 2)=="o." loc clean_varname = substr(`"`varname'"', 3, .)
-			if substr("`clean_varname'", 1, 3)=="co." loc clean_varname = substr(`"`varname'"', 4, .)
+			if substr("`varname'", 1, 2)=="o."  loc clean_varname = substr(`"`varname'"', 3, .)
+			if substr("`varname'", 1, 3)=="co." loc clean_varname = substr(`"`varname'"', 4, .)
 			
 			//if substr("`varname'",1,2)!="o." {
 				
@@ -607,7 +599,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
                 local in_indicate = 0
 				frame `indframe': qui levelsof varlist, local(indicated)
 				foreach pat of local indicated {
-					if strmatch("`clean_varname'", `"`pat'"') local in_indicate = 1
+					if strmatch("`varname'", `"`pat'"') local in_indicate = 1
 				}
 				
 				if `in_indicate'==0 { // Include parameter
@@ -856,7 +848,8 @@ prog statex_est_indic
 end
 
 prog statex_est_stats
-	syntax namelist, name(namelist max=1) [stats(namelist) format(string) labels(string)]
+	syntax namelist, name(namelist max=1) [statistics(string asis)] //[stats(namelist) format(string) labels(string)]
+	loc estnames `namelist'
 	// Add regression statistics (N observations etc.)
 	
 	* Syntax
@@ -865,10 +858,10 @@ prog statex_est_stats
 	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	
-	if "`label'"!=""  	loc option_label  = 1
-	else				loc option_label  = 0
-	if "`format'"!=""	loc option_format = 1
-	else 				loc option_format = 0
+	loc 0 `statistics'
+	syntax [namelist], [format(string asis) label(string asis)]
+	loc stats `namelist'
+	if `"`stats'"'=="" loc stats = "N r2"
 	
 	// Default options if stats is unspecificed
 	if "`stats'"=="" {
@@ -879,41 +872,47 @@ prog statex_est_stats
 	* Write table
 	*************
 	
+	di `"`stats'"'
+	di `"format: `format'"'
+	di `"label: `label'"'
 	loc n = 1
-	foreach stat_name of local stats {
+	foreach stat of local stats {
+		di "stat: `stat'"
 		if `n'>1 mata: pT->add_line("")
 		loc n = `n'+1
 		
-		// Label stats
-		loc stat_label = ""
-		loc stat_label_written = 0 // FLAG: Can just do if, else if etc?
-		gettoken stat_label labels : labels  // Use user provided label if provided
-		if "`stat_label'"!="" {
-			mata pT->append_to_line("`stat_label'", 1, "left")
-			loc stat_label_written = 1
+		// Label - Note: Stata keeps interpreting $ when using locals, so writing directy to Mata
+		loc done = 0
+		gettoken lab label : label
+		if "`lab'"=="" & "`stat'"=="N" 	{
+			mata pT->append_to_line("Observations", 1, "left") 
+			loc done = 1
 		}
-		if !`stat_label_written' & `"`stat_name'"'=="N" {
-			mata pT->append_to_line("Observations", 1, "left")
-			loc stat_label_written = 1
+		if "`lab'"=="" & "`stat'"=="r2" {
+			mata pT->append_to_line(`"\$R^2\$"', 1, "left") 
+			loc done = 1
 		}
-		if !`stat_label_written' & `"`stat_name'"'=="r2"	{
-			mata pT->append_to_line("\$R^2\$", 1, "left")
-			loc stat_label_written = 1
+		if !`done' {
+			if `"`lab'"'!="" 	mata pT->append_to_line(`"`lab'"', 1, "left") 
+			else 				mata pT->append_to_line(`"`stat'"', 1, "left") 
 		}
-		if !`stat_label_written' mata pT->append_to_line(`"`stat_name'"', 1, "left")
-		// Format stats
-		if `option_format' gettoken stat_format format : format
-		if `"`stat_format'"'=="" loc stat_format = "`last_stat_format'" // Use last provided 
-		if `"`stat_format'"'=="" loc stat_format = "%12.2fc" // Use default if still empty
-		loc last_stat_format = `"`stat_format'"'
 		
-		foreach est of local namelist {
+		
+		// Format stats
+		loc last_format = "`fmt'"
+		gettoken fmt format : format
+		if `"`fmt'"'=="" loc fmt = "`last_format'" // Use last provided 
+		if `"`fmt'"'=="" & "`stat'"=="N"  loc fmt = "%12.0fc"
+		if `"`fmt'"'=="" loc fmt = "%12.3fc"
+		
+		foreach est of local estnames {
 			qui estimates restore `est'
-			loc stat = e(`stat_name')
-			if `stat'==. loc stat = ""
-			if "`stat'"!="" loc stat = string(`stat', "`stat_format'")
+			di "stat*: `stat'"
+			loc value = e(`stat')
+			if `value'==. loc value = ""
+			if "`value'"!="" loc value = string(`value', "`fmt'")
 			mata pT->append_to_line("&", 0, "no")
-			mata pT->append_to_line("`stat'", 1, "center")
+			mata pT->append_to_line("`value'", 1, "center")
 		} 
 		mata: pT->append_to_line(`"\\"', 0, "no")
 	}

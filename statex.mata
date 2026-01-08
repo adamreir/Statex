@@ -282,10 +282,16 @@ void Statex::set_current(string scalar _name) {
 void Statex::dir() { // Dir
 	real scalar i
 	class Table scalar T
-	for (i=1; i<=rows(tables); i++) {
-		T = (*tables[i])
-		if (T.name==current) 	printf("*" + T.name + " (%f columns);" + "\n", T.ncols)
-		else				printf(T.name + " (%f columns);" +"\n", T.ncols)
+	if (rows(tables)>0) {
+		for (i=1; i<=rows(tables); i++) {
+			T = (*tables[i])
+			if (T.name==current) 	printf("*" + T.name + " (%f columns);" + "\n", T.ncols)
+			else				printf(T.name + " (%f columns);" +"\n", T.ncols)
+		}
+		printf("\nNote: The table marked with * is the currently selected table used whenever no name is provided.\n")
+	}
+	else {
+		printf("\nNo statex tables are currently in memory.\n")
 	}
 }
 
