@@ -1346,8 +1346,8 @@ prog statex_numbers
 	* Syntax
 	********
 	
-	if `blank' 	loc i1 = "2"
-	else		loc i1 = "1"
+	if `blank' 	loc iN = `n_cols'-1
+	else		loc iN = `n_cols'
 	
 	* 
 	
@@ -1359,9 +1359,9 @@ prog statex_numbers
 	mata: pT->add_line("")
 	if `blank' {
 		mata: pT->append_to_line(`""', 1, "center")
-		mata: pT->append_to_line(`"&"', 0, "no")
+		if `n_cols'>1 mata: pT->append_to_line(`"&"', 0, "no")
 	}
-	forv i=`i1'/`n_cols' {
+	forv i=2/`iN' {
 		mata: pT->append_to_line(`"\multicolumn{1}{c}{(`i')}"', 1, "center")
 		mata: pT->append_to_line(`"&"', 0, "no")
 	}
