@@ -1363,7 +1363,7 @@ prog statex_numbers
 	}
 	forv i=2/`iN' {
 		mata: pT->append_to_line(`"\multicolumn{1}{c}{(`i')}"', 1, "center")
-		mata: pT->append_to_line(`"&"', 0, "no")
+		if `i'<`iN' mata: pT->append_to_line(`"&"', 0, "no")
 	}
 	mata: pT->append_to_line(`"\\"', 0, "no")
 	
