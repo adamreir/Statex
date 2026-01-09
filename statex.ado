@@ -131,7 +131,6 @@ prog statex_drop
 	************
 	if "`namelist'"!="_all" {
 		foreach name of local namelist {
-			di "`name'"
 			if "`name'"=="" mata: st_local("name", statex.get_current())
 			mata: pT = statex.get_table("`name'")
 			mata: statex.drop_table(pT)
@@ -303,7 +302,6 @@ prog statex_row
 				di as error `"midrule must consists of lists of numbers, received `l'-`r'"' // Flag: move this code up to the beguinning of the program
 			}
 			
-			di `"`l'-`r'"'
 			mata: pT->append_to_line(`" \cmidrule(lr){`l'-`r'} "',0, "no")
 		}
 	}
@@ -445,7 +443,6 @@ prog statex_est
 		if "`longmidrule'"!="" statex_midrule, name(`name')
 		else mata: pT->append_to_line(`" \cmidrule(lr){2-`ncols'}"', 0, "no")
 		mata: pT->add_line("")
-		di `"statex_est_stats `namelist', name(`name') `statistics'"'
 		statex_est_stats `namelist', name(`name') `statistics'
 	}
 end
@@ -662,7 +659,6 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 						qui count if clean_varlist == "`clean_varlist'"
 						if r(N)==0 {
 							qui set obs `=_N+1'
-							di "`var'"
 							qui replace varlist = "`var'" if _n==_N
 							qui replace clean_varlist = "`clean_varlist'" if _n==_N
 							qui replace clean_label = "`clean_label'" if _n==_N
@@ -785,7 +781,6 @@ prog statex_est_header
 	* Write 
 	********
 	if "`group'"=="nogroup" loc midrule = ""
-	di `"statex row, name(`name') row(`yrow') `bold' align(`align')  multicolumn(`multicolumn') cmidrule(`midrule')"'
 	statex row, name(`name') row(`yrow') `bold' align(`align')  multicolumn(`multicolumn') cmidrule(`midrule')
 	
 end
@@ -1074,7 +1069,6 @@ prog statex_mat
 			}
 		}
 	}
-	di "All formats OK"
 	
 	// Fill `rowlabels' with matrix rownames
 	if `"`rowlabels'"'=="rownames" loc rownames : rownames `b' 
@@ -1310,7 +1304,6 @@ prog statex_save
 	mata: rc = pT->write_table(`filename')
 	mata: st_local("rc", strofreal(rc))
 	
-	di "Return code: `rc'"
 	if `rc'==0 {
 		di as error "Stata (Mata) experienced an error when trying to write the table to file"
 		exit 198
@@ -1340,7 +1333,6 @@ prog statex_numbers
 	// Manual parsing
 	while `"`numbers'"'!="" {
 		gettoken option numbers : numbers
-		di "						{bf: parse option numbers - now `option'}"
 		cap assert inlist(`"`option'"', "none", "noblank")
 		if _rc {
 			di as error `"Statex numbers did not recognize option `opt'"'
@@ -1356,7 +1348,6 @@ prog statex_numbers
 	
 	if `blank' 	loc i1 = "2"
 	else		loc i1 = "1"
-	di "`i1'"
 	
 	* 
 	
