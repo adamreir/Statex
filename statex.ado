@@ -1346,16 +1346,18 @@ prog statex_numbers
 	* Syntax
 	********
 	
-	if `blank' 	loc iN = `n_cols'-1
-	else		loc iN = `n_cols'
-	
-	* 
-	
 	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	
-	mata: st_local("n_cols", strofreal(pT->ncols))
+	* Prepare
+	*********
 	
+	mata: st_local("n_cols", strofreal(pT->ncols))
+	if `blank' 	loc iN = `n_cols'-1
+	else		loc iN = `n_cols'
+	
+	* Write
+	*******
 	mata: pT->add_line("")
 	if `blank' {
 		mata: pT->append_to_line(`""', 1, "center")
