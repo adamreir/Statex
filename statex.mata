@@ -11,14 +11,23 @@ class Table {
 	string scalar name
 	string scalar stars
 	string scalar paren
+	
+	// Keep track of paren/SE usage
 	real scalar used_stars
 	real scalar used_paren
+	real scalar used_conventional_se
+	real scalar used_robust_se
+	real scalar used_clustered_se
+	string scalar cluster_var
+	
+	
 	real scalar panel_counter
 	real scalar ncols
 	real scalar cell_width
 	real scalar cell_overflow
 	real scalar is_closed
 	real scalar ci_level
+	
 	void init()
 	void li()
 	void add_line() 
@@ -31,16 +40,21 @@ class Table {
 void Table::init(string scalar _name, real scalar _ncols, string scalar _stars, string scalar _paren, real scalar _cell_width, real scalar _ci_level) {
 	content = J(0, 1, "")
 	name = _name
-	//filename = _filename
-	used_stars = 0
-	used_paren = 0
-	ncols = _ncols
 	stars= _stars
 	paren = _paren
-	cell_width = _cell_width
+	
+	used_stars = 0
+	used_paren = 0
+	used_conventional_se = 0
+	used_robust_se = 0
+	used_clustered_se = 0
+	cluster_var = ""
+	
 	panel_counter = 65
-	is_closed = 0
+	ncols = _ncols
+	cell_width = _cell_width
 	cell_overflow = 0
+	is_closed = 0
 	ci_level = _ci_level
 }
 
