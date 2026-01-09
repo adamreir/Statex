@@ -938,8 +938,8 @@ prog statex_est_stats
 		loc last_format = "`fmt'"
 		gettoken fmt format : format
 		if `"`fmt'"'=="" loc fmt = "`last_format'" // Use last provided 
-		if `"`fmt'"'=="" & "`stat'"=="N"  loc fmt = "%12.0fc"
-		if `"`fmt'"'=="" loc fmt = "%12.3fc"
+		if `"`fmt'"'=="" & "`stat'"=="N"  loc fmt = "%19.0fc"
+		if `"`fmt'"'=="" loc fmt = "%19.3fc"
 		
 		foreach est of local estnames {
 			qui estimates restore `est'
