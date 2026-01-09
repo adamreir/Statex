@@ -376,8 +376,8 @@ prog statex_est
 	}
 	
 	// Default formats [FLAG: se should be multiple options? se, t or p?]
-	if `"`b'"' =="" 	loc b  =  "b(%12.3fc)"
-	if `"`paren'"'=="" 	loc paren = "paren(%12.3fc)"
+	if `"`b'"' =="" 	loc b  =  "b(%19.3fc)"
+	if `"`paren'"'=="" 	loc paren = "paren(%19.3fc)"
 	
 	if "`paren'"!="paren(none)" 	mata: pT->used_paren = 1
 	if "`stars'"!="none"			mata: pT->used_stars = 1
