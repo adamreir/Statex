@@ -12,7 +12,7 @@ adopath + "${statex}"
 do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.ado"
 
-statex new, n_cols(4) paren("se")
+
 
 
 clear
@@ -29,42 +29,16 @@ lab var x1 "X1"
 //set trace on
 set tracedepth 2
 
-g omit = 0
-
-eststo est1: qui reghdfe y x1 x2, absorb(i.year i.id)
-estadd scalar M = 123 
-eststo est2:  reghdfe y x1 c.omit#c.year  	year	, absorb(i.year i.id) 
-
-eststo est3: reg x1 x2
-
-lab var y "Y"
-lab var x1 "X1"
-
-//statex est_extract est1 est2, indicate("Xs=x?", indicators("yes" "no"))
-//frame __table_res: li
-//frame __table_indicate: li
-
-//statex row, row("abc" "def") //blank //align(c c) multicolumn(1 1)
-
+eststo est1: reg y x1
+eststo est2: reg y x1 x2
 
 
 //set trace on 
 set tracedepth 3
 
-statex midrule
-statex panel, text("A panel")
-//statex est_stats est1 est2, name(Table1) stats(N r2 M)
-statex est est1 est2 est3, label b(%3.2fc) paren(%3.2fc) indicate("Year FE=*.year" "indiv FE=*.id") nogap stat(N r2 M, label("Obs 2" R2 MMmm) format(%12.2fc %12.3fc %12.3fc))
-/*
-statex midrule
-statex panel, text("Another panel")
-statex est est1 est2, label b(%3.2fc) indicate("Year FE=*year") //noindic //se(%3.2fc)
-statex panel, text("Just Fixed Effects")
-statex est est1 est2, indicate("Year FE=*year") noheader notable nostats
-*/
+statex new, n_cols(3) paren("se")
 
-//statex close, footer(robust custom(`"A custom footer"' a nother))
-
+statex est est1 est2, label b(%3.2fc) paren(%3.2fc) order(x2 _cons x1)
 
 statex list
 
