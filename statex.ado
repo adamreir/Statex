@@ -376,7 +376,7 @@ prog statex_est
 	}
 	
 	// Default formats [FLAG: se should be multiple options? se, t or p?]
-	if `"`b'"' =="" 	loc b  =  "b(%19.3fc)"
+	if `"`b'"' =="" 	loc b     = "b(%19.3fc)"
 	if `"`paren'"'=="" 	loc paren = "paren(%19.3fc)"
 	
 	if "`paren'"!="paren(none)" 	mata: pT->used_paren = 1
@@ -593,9 +593,6 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		loc n = colsof(b)
 		forv i = 1/`n' {
 			loc varname : word `i' of `varnames'
-			
-			//if substr("`varname'", 1, 2)=="o."  loc varname = substr(`"`varname'"', 3, .)
-			//if substr("`varname'", 1, 3)=="co." loc varname = substr(`"`varname'"', 4, .)
 			
 			// Check if `varname' is in `indicate'
 			local in_indicate = 0

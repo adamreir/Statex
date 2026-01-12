@@ -95,41 +95,68 @@ end
 cap frame drop vce
 frame create vce
 frame vce {
-    gen str32 command     = ""
-    gen str32 vce         = ""
+    g command     = ""
+    g vce_opt     = ""
 
-    gen str80 loc_vce     = ""
-    gen str80 loc_vcetype = ""
-    gen str200 loc_clustvar = ""
-
-    * optional extras (some commands use these; harmless if missing)
-    gen str200 loc_clustvar1 = ""
-    gen str200 loc_clustvar2 = ""
+	g has_eb = .
+	g has_eV = .
+	
+    g vce     = ""
+    g vcetype = ""
+    g clustvar = ""
+	g N_clust1 = .
+	g N_clust2 = .
+	g N_clust3 = .
+	g N_clustervars = .
+	g N_clust = .
+	
+    g clustvar1 = ""
+    g clustvar2 = ""
+	g clustvar3 = ""
 }
 
 ********************************************************************************
 * Store e() locals of interest
 ********************************************************************************
 
+
 cap prog drop store_se
 prog store_se
     syntax, [vce(passthru)]
-
+	qui {
     frame vce {
         qui count if command == e(cmd) & vce == "`vce'"
         if r(N)==0 {
             qui set obs `=_N+1'
             qui replace command = e(cmd)   if _n==_N
-            qui replace vce     = "`vce'"  if _n==_N
+            qui replace vce_opt     = "`vce'"  if _n==_N
         }
-
-        foreach loc in vce vcetype clustvar clustvar1 clustvar2 {
+		
+		// e(b), e(V)
+		cap 
+		mat list e(b)
+		if !_rc replace has_eb = 1 if command == e(cmd) & vce_opt=="`vce'"
+		else    replace has_eb = 0 if command == e(cmd) & vce_opt=="`vce'"
+		
+		cap mat list e(V)
+		if !_rc replace has_eV = 1 if command == e(cmd) & vce_opt=="`vce'"
+		else    replace has_eV = 0 if command == e(cmd) & vce_opt=="`vce'"
+		
+		// locals
+        foreach loc in vce vcetype clustvar clustvar1 clustvar2 clustvar3 {
             cap local content = e(`loc')
             if _rc local content = ""
             if "`content'" == "." local content = ""
-            qui replace loc_`loc' = "`content'" if command == e(cmd) & vce=="`vce'"
+            qui replace `loc' = "`content'" if command == e(cmd) & vce_opt=="`vce'"
+        }
+		
+		// scalars
+		foreach scalar in N_clust1 N_clust2 N_clust3 N_clustervars N_clust {
+			di e(`scalar')
+            qui replace `scalar' = e(`scalar') if command == e(cmd) & vce_opt=="`vce'"
         }
     }
+	}
 end
 
 ********************************************************************************
@@ -155,13 +182,14 @@ end
 
 get_data1
 
-foreach vce in "" ///
-	/*vce(robust) vce(hc2) vce(hc3) "vce(cluster cluster1)" "vce(cluster cluster1 cluster2)"*/ "vce(cluster cluster1 cluster2 cluster3)"  /// HAC/cluster
-	/*"vce(hac bartlett 3)" "vce(hac nwest 3)" "vce(hac gallant 3)" "vce(hac parzen 3)" "vce(hac qa 3)" "vce(hac an 3)" /// Autocorrelation
-	vce(bootstrap) vce(jackknife)*/ vce(jackknife1) ///Bootstrap
-	/*vce(unbiased) /// ?
+foreach vce in "" /// NO option
+	vce(robust) vce(hc2) vce(hc3) /// HAC
+	"vce(cluster cluster1)" "vce(cluster cluster1 cluster2)" "vce(cluster cluster1 cluster2 cluster3)"  /// cluster
+	"vce(hac bartlett 3)" "vce(hac nwest 3)" "vce(hac gallant 3)" "vce(hac parzen 3)" "vce(hac qa 3)" "vce(hac an 3)" /// Autocorrelation
+	vce(bootstrap) vce(jackknife) vce(jackknife1) ///Bootstrap
+	vce(unbiased) /// ?
 	vce(oim) vce(ols) vce(conventional) vce(opg) vce(eim)  /// ML based VCE
-	*/ {
+	 {
 	
 	// Some autocorrelation specific VCE calculations requires time series (i.e. no duplicates in t)
 	if substr("`vce'", 1, 7)=="vce(hac" {
@@ -224,5 +252,5 @@ foreach vce in "" ///
 
 get_data1
 
-frame vce: li, sepby(vce)
+frame vce: li, sepby(vce_opt)
 frame vce: save "C:\Users\s16501\Documents\GitHub\Statex\document_vce_local\vce_local.dta", replace
