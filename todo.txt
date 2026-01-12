@@ -1,0 +1,23 @@
+Todo: 
+ - Make sure _cons is put at the bottom of est (i.e. do some default parsing, but let user override)
+ - Make complete list of symbols to escape in Latex (in particular "%" -> "\%")
+ - Add option "new" to est and similar commands (avoid having to do "statex new")
+ - Remove option "n_cols" from "statex new", and instead record the number of columns the first time
+   the user writes to the table. Requires that the "\begin{table}" ++ declaration be written 
+   not when the user does statex new but rather when the user first writes to the table. 
+ - Add option to specify alignment. 
+ - Add option to specify center alignment via Latex package? 
+ - Check valid format. opt.  stat, suboption format will simply remove numbers With illigal format ("&4.1fc"). Is there a cap? ": display `format' `num'" should produce an error if format is illigal?
+ - statex est: Make options e.g. onlyheader as a synonym for " notable noindic nostats"
+ - Add option "panel" to statex est?
+ - Check: statex est now does this between params and stats "[1em] \cmidrule(lr){2-n}". Make sure this is not a bug. 
+ - Display error if the user specifies a variable in statex est option "order" or "drop" that does not exist (but maybe not exit With error?)
+- Implement indicate(, label(Yes No)) suboption. 
+ - Use indicator variable labels if suboptions label not provided? 
+ - Make statex panel add midrule by default (and add option nomidrule)
+ - Add suboption to format * footer note (* p< 0.100 or * p< 0.10)
+
+Long term: 
+ - Add "force" option. Think more about this: Should a "force" option be distributed to all subcommands
+   or should it be specified for each subcommand? I think the first is best. 
+ - User instructions in help file and additional info + examples on GitHub (postpone until all options are ish decided). 
