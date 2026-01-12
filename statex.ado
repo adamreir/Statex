@@ -503,16 +503,23 @@ prog statex_est_prepare
 		frame `estframe': drop keep
 	}
 	
-	if `"`order'"'!="" {
-		frame `estframe': qui g order = .
-		frame `estframe': qui g init_order = _n
-		loc current_order = 1
-		foreach token of local order {
-			frame `estframe': qui replace order = `current_order' if strmatch(varlist, `"`token'"')
-			loc current_order = `current_order' + 1
+	// Order (put _cons last unless the user specifies something else)
+	
+	frame `estframe' {
+		qui g init_order = _n
+		qui g cons_order = varlist == "_cons"
+		
+		if `"`order'"'!="" {
+			qui g order = .
+			loc n = 1
+			foreach token of local order {
+				qui replace order = `n' if strmatch(varlist, `"`token'"')
+				loc n = `n' + 1
+			}
+			loc order = "order"
 		}
-		frame `estframe': sort order init_order
-		frame `estframe': drop order init_order
+		sort `order' cons_order init_order
+		drop `order' init_order
 	}
 	
 	
