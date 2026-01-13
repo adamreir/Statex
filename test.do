@@ -30,18 +30,18 @@ lab var x1 "X1"
 set tracedepth 2
 
 eststo est1: reg y x1
-eststo est2: reg y x1 x2
-
-eststo est3: reg y x1 x2
-
+eststo est2: reghdfe y x1 x2, absorb(year)
 
 //set trace on 
 set tracedepth 5
 
-statex new, /*n_cols(3)*/ paren("se")
+statex new, /*n_cols(3)*/ paren("se") //width(50)
 
-statex est est1 est2, label /*b(%3.2fc)*/ paren(%3.2fc) order(x2 _cons x1) statistics(r2 N, format(%3.1fc %19.1fc) label(RR2 OBS))
-statex est est1 est2 est3, label /*b(%3.2fc)*/ paren(%3.2fc) order(x2 _cons x1) statistics(r2 N, format(%3.1fc %19.1fc) label(RR2 OBS))
+
+statex est est1 est2, label /*b(%3.2fc)*/ paren(%3.2fc) statistics(r2 N, format(%3.1fc %19.1fc) label(RR2 OBS)) indicate("Year FE=*year", label(yes no))
+
+statex row, row(a b c)
+statex close
 
 statex list
 

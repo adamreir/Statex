@@ -20,7 +20,7 @@ class Table {
 	real scalar used_clustered_se
 	string scalar cluster_var
 	
-	
+	// State
 	real scalar panel_counter
 	real scalar ncols
 	real scalar cell_width
@@ -28,6 +28,7 @@ class Table {
 	real scalar is_closed
 	real scalar ci_level
 	real scalar has_preamble
+	
 	
 	void init()
 	void li()
@@ -314,10 +315,10 @@ void Statex::dir() { // Dir
 			if (T.name==current) 	printf("*" + T.name + " (%f columns);" + "\n", T.ncols)
 			else				printf(T.name + " (%f columns);" +"\n", T.ncols)
 		}
-		printf("\nNote: The table marked with * is the currently selected table used whenever no name is provided.\n")
+		printf("\nNote: The table marked with * is the currently selected table. This will be used whenever no table name is provided using the ', name()' option.\n")
 	}
 	else {
-		printf("\nNo statex tables are currently in memory.\n")
+		printf("\Statex does not currently have tables in memory.\n")
 	}
 }
 

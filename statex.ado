@@ -186,7 +186,7 @@ end
 prog statex_row
 	syntax, ///
 		[name(namelist max=1)] ///
-		row(string asis) [multicolumn(numlist integer min=1) noblank align(string) underline(string asis) bold cmidrule(string asis)]
+		row(string asis) [multicolumn(numlist integer min=1) blank align(string) underline(string asis) bold cmidrule(string asis)]
 	
 	* Check that mata object statex exists: 
 	***************************************
@@ -199,8 +199,9 @@ prog statex_row
 	
 	* Parse
 	*******
-	loc blank = "`noblank'"==""
+	loc blank = "`blank'"!=""
 	loc has_multicolumn = `"`multicolumn'"'!=""
+	
 	
 	// If not multicolumn: n in row same as columns in table
 	if !`has_multicolumn' {
@@ -278,20 +279,22 @@ prog statex_row
 	************
 	mata: pT->add_line("")
 	if !`has_multicolumn' {
-		loc n = 0
+		loc n = 1
 		if `blank' {
 			mata: pT->append_to_line("",1,"center")
 			loc ++n
 		}
 		
 		foreach elem of local row {
-			if `n'>0 mata: pT->append_to_line("&", 0, "no")
-			mata: pT->append_to_line(`"`bold_start'`elem'`bold_end'"',1, "left")
+			if `n'>1 mata: pT->append_to_line("&", 0, "no")
+			if `n'==0 	loc latexalign = "left"
+			else 		loc latexalign = "center"
+			mata: pT->append_to_line(`"`bold_start'`elem'`bold_end'"',1, "`latexalign'")
 			loc ++n
 		}
 	}
 	else {
-		loc n = 0
+		loc n = 1
 		if `blank' {
 			mata: pT->append_to_line("",1,"center")
 			loc ++n
@@ -302,8 +305,10 @@ prog statex_row
 			gettoken n_cols multicolumn : multicolumn
 			if `has_align' 	gettoken a align : align
 			else 			loc a = "c"
-			if `n'>0 mata: pT->append_to_line("&", 0, "no")
-			mata pT->append_to_line(`"\multicolumn{`n_cols'}{`a'}{`bold_start'`elem'`bold_end'}"',1, "left")
+			if `n'>1 mata: pT->append_to_line("&", 0, "no")
+			if `n'==0 	loc latexalign = "left"
+			else 		loc latexalign = "center"
+			mata pT->append_to_line(`"\multicolumn{`n_cols'}{`a'}{`bold_start'`elem'`bold_end'}"',1, "`latexalign'")
 			loc ++n
 		}
 	}
@@ -420,7 +425,7 @@ prog statex_est
 	
 	if "`header'"!="noheader" {
 		statex_est_header `namelist', name(`name') `label' `bold' `group'
-		statex_numbers, `numbers'
+		statex_numbers, `numbers' blank
 		statex_midrule, name(`name')
 	}
 	
@@ -553,15 +558,19 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		local indicate_options = strtrim(substr(`"`indicate'"', `cpos' + 1, .))	
 	}
 	loc 0 , `indicate_options'
-	syntax , [indicators(string asis)]
+	syntax , [label(string asis)]
 	
-	loc n_indicators     = wordcount(`"`indicators'"')
+	loc n_labels     = wordcount(`"`label'"')
 	
-	cap assert `n_indicators'<=2 
+	cap assert `n_labels'<=2 
 	if _rc {
-		di as error "Cannot provide more than two indicators (only used to display 'yes' and 'no')."
+		di as error "Cannot provide more than two indicator labels (only used to display 'yes' and 'no')."
 		exit 198
 	}
+	gettoken yes no : label
+	loc no = substr(`"`no'"',2,.)
+	if `n_labels'==0 loc yes = "\checkmark"
+	
 	
 	foreach var_lab of local indicate_var_lab {
 		//gettoken lab var : var_lab, parse("=")
@@ -736,6 +745,10 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		frame `indframe': qui replace `v' = subinstr(`v', "`escape'", "\\`escape'", .)
 	}
 	}
+	
+	frame `indframe': qui g yes =  `"`yes'"'
+	frame `indframe': qui g no =  `"`no'"'
+	
 end
 
 // FLAG: add options (bold, label). Also add group to group yvars (with cmidrule)
@@ -801,7 +814,7 @@ prog statex_est_header
 	* Write 
 	********
 	if "`group'"=="nogroup" loc midrule = ""
-	statex row, name(`name') row(`yrow') `bold' align(`align')  multicolumn(`multicolumn') cmidrule(`midrule')
+	statex_row, name(`name') row(`yrow') `bold' align(`align')  multicolumn(`multicolumn') cmidrule(`midrule') blank
 	
 end
 
@@ -890,6 +903,8 @@ prog statex_est_indic
 	
 	// Write indicators
 	frame `indframe': loc n_indics = _N
+	frame `indframe': loc yes = yes[1]
+	frame `indframe': loc no = no[1]
 	
 	forv row_i = 1/`n_indics' {
 		frame `indframe': loc var = label[`row_i']
@@ -899,8 +914,8 @@ prog statex_est_indic
 		forv col_i = 1/`n_cols' {
 			frame `indframe': loc has = fe`col_i'[`row_i'] == 1
 			mata pT->append_to_line(`"&"', 0, "no")
-			if `has' 	mata pT->append_to_line(`"\checkmark"', 1, "center")
-			else 		mata pT->append_to_line(`""', 1, "center")
+			if `has' 	mata pT->append_to_line(`"`yes'"', 1, "center")
+			else 		mata pT->append_to_line(`"`no'"', 1, "center")
 		}
 		mata: pT->append_to_line(`"\\"', 0, "no")
 		if `row_i'<`n_indics' & "`gap'"!="nogap" mata: pT->add_line(`"[1em]"')
@@ -1373,7 +1388,7 @@ prog statex_midrule
 end
 
 prog statex_numbers 
-	syntax, [name(namelist max=1) noblank numbers(string asis)]
+	syntax, [name(namelist max=1) blank numbers(string asis)]
 	
 	// Manual parsing
 	while `"`numbers'"'!="" {
@@ -1386,7 +1401,8 @@ prog statex_numbers
 		if "`option'"=="none" exit
 		if "`option'"=="noblank" loc blank=0
 	}
-	if  "`blank'"=="" loc blank = 1
+	loc blank = "`blank'"!=""
+	
 	
 	* Syntax
 	********
