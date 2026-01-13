@@ -1,10 +1,10 @@
 Todo: 
- - Make sure _cons is put at the bottom of est (i.e. do some default parsing, but let user override)
  - Make complete list of symbols to escape in Latex (in particular "%" -> "\%")
  - Add option "new" to est and similar commands (avoid having to do "statex new")
  - Remove option "n_cols" from "statex new", and instead record the number of columns the first time
    the user writes to the table. Requires that the "\begin{table}" ++ declaration be written 
-   not when the user does statex new but rather when the user first writes to the table. 
+   not when the user does statex new but rather when the user first writes to the table.
+	- Implemented - but now there are a bunch of "pT->ncols" that might Return -1 (:not set) - and I no longer Write the preamble. Suggest adding the preamble when closing the table. 
  - Add option to specify alignment. 
  - Add option to specify center alignment via Latex package? 
  - Check valid format. opt.  stat, suboption format will simply remove numbers With illigal format ("&4.1fc"). Is there a cap? ": display `format' `num'" should produce an error if format is illigal?

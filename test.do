@@ -9,7 +9,7 @@ adopath + "${statex}"
 //findfile statex.mata
 //qui do "`r(fn)'"
 
-do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
+//do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.mata"
 //do "C:/Users/`=c(username)'/Documents/GitHub/statex/statex.ado"
 
 
@@ -34,11 +34,13 @@ eststo est2: reg y x1 x2
 
 
 //set trace on 
-set tracedepth 3
+set tracedepth 5
 
-statex new, n_cols(3) paren("se")
+statex new, /*n_cols(3)*/ paren("se")
 
-statex est est1 est2, label b(%3.2fc) paren(%3.2fc) order(x2 _cons x1)
+statex row, row("a" "b")
+
+statex est est1 est2, label /*b(%3.2fc)*/ paren(%3.2fc) order(x2 _cons x1) statistics(r2 N, format(%3.1fc %19.1fc) label(RR2 OBS))
 
 statex list
 

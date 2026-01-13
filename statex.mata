@@ -27,17 +27,19 @@ class Table {
 	real scalar cell_overflow
 	real scalar is_closed
 	real scalar ci_level
+	real scalar has_preamble
 	
 	void init()
 	void li()
 	void add_line() 
 	void append_to_line()
 	void panel()
+	void check_ncols()
 	real scalar write_table()
 	string scalar pad_string()
 }
 
-void Table::init(string scalar _name, real scalar _ncols, string scalar _stars, string scalar _paren, real scalar _cell_width, real scalar _ci_level) {
+void Table::init(string scalar _name, string scalar _stars, string scalar _paren, real scalar _cell_width, real scalar _ci_level) {
 	content = J(0, 1, "")
 	name = _name
 	stars= _stars
@@ -51,7 +53,7 @@ void Table::init(string scalar _name, real scalar _ncols, string scalar _stars, 
 	cluster_var = ""
 	
 	panel_counter = 65
-	ncols = _ncols
+	ncols = -1 // -1: not set yet. Set whenever first needed
 	cell_width = _cell_width
 	cell_overflow = 0
 	is_closed = 0
@@ -70,7 +72,7 @@ void Table::add_line(string scalar line) {
 	cell_overflow = 0
 }
 
-void Table::append_to_line(string scalar line, real scalar pad, string scalar lcr) {
+void Table::append_to_line(string scalar line, real scalar pad, string scalar lcr) { // lcr:alignment ("left", "center", or "right")
 	if (pad==1) {
 		line = pad_string(line, lcr)
 	}
@@ -146,8 +148,18 @@ real scalar Table::write_table(string scalar filename) {
 	return(1)
 }
 
-
+void Table::check_ncols(real scalar _ncols ,string scalar error_msg) {
+	if (ncols==-1) ncols = _ncols
+    else if (ncols != _ncols) {
+		errprintf("    " + error_msg + " You are trying to write " + strofreal(_ncols) + " columns, but previously wrote " + strofreal(ncols) + " columns.\n")
+		_error(3200)
+	}
+}
 end
+
+
+
+
 
 **************************
 * Global Statex Class Def*
@@ -165,7 +177,7 @@ class Statex {
 	void init() //public
 	
 	// Add delete etc.
-	pointer scalar add_table()
+	pointer scalar new_table()
 	void drop_table()
 	void drop_all()
 	
@@ -187,12 +199,12 @@ void Statex::init() {
 	tables = J(0,1,NULL)
 }
 
-pointer scalar Statex::add_table(string scalar name, real scalar ncols, string scalar stars, string scalar paren, real scalar cell_width, real scalar ci_level) { // Add Tables
+pointer scalar Statex::new_table(string scalar name, string scalar stars, string scalar paren, real scalar cell_width, real scalar ci_level) { // Add Tables
 	class Table scalar T
 	confirm_noexist(name)
 	
 	T = Table()
-	T.init(name, ncols, stars, paren, cell_width, ci_level)
+	T.init(name, stars, paren, cell_width, ci_level)
 	tables = tables \ &T
 	current = name
 	

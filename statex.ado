@@ -41,7 +41,7 @@ end
 prog statex_new
 	syntax, ///
 		[name(namelist max=1)] ///
-		[coltypes(string)] n_cols(integer) ///
+		[coltypes(string)] ///
 		[stars(numlist descending min=3 max=3) ci_level(real 95) paren(string) replace] ///
 		[width(integer 20)]
 	
@@ -73,6 +73,16 @@ prog statex_new
 	// Default options: 
 	if "`stars'"=="" loc stars = ".05 .01 .001"	
 	if "`paren'"=="" loc paren = "se"
+	
+	* Save Meta Information
+	***********************
+	if "`name'"=="" mata: statex.get_auto_newname() // Get auto name if name is unspecified. 
+	mata: pT = statex.new_table("`name'", "`stars'", "`paren'", `width', `ci_level')
+	
+end
+
+prog statex_begin_table
+
 	//if "`ci_level'"=="" loc ci_level = "95"
 	if "`coltypes'"=="" {
 		loc coltypes = "l"
@@ -80,14 +90,11 @@ prog statex_new
 			loc coltypes = "`coltypes'c"
 		}
 	}
-	
-	* Save Meta Information
-	***********************
-	if "`name'"=="" mata: statex.get_auto_newname() // Get auto name if name is unspecified. 
-	mata: pT = statex.add_table("`name'", `n_cols', "`stars'", "`paren'", `width', `ci_level')
 	mata: pT->add_line("\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}")
 	mata: pT->add_line("\begin{tabular}{`coltypes'} \hline\midrule")
+
 end
+
 
 prog statex_list
 	syntax, [name(string)]
@@ -180,21 +187,13 @@ prog statex_row
 		loc ncols : list sizeof row
 		if `blank' loc ncols = `ncols' + 1
 		
-		// Get number of columns of table: 
-		mata: st_local("ncols_table", strofreal(pT->ncols))
-		
 		// Check that they are the same: 
-		cap assert `ncols' == `ncols_table' //test: statex_new, ncols(3); statex_row, row("a" "b" "c" "d")
-		if _rc {
-			if `blank' loc blank_message = " including one blank column"
-			di as error "Wrong number of elements in row. Received `ncols' columns`blank_message', expected `ncols_table'"
-			exit 198
-		}
+		mata: pT->check_ncols(`ncols',  "Wrong number of elements in row.")
 		
 		// Check: alignment not specified
 		cap assert `"`align'"'=="" //test: statex_new, ncols(3); statex_row, row("a" "b" "c") align(c c c) 
 		if _rc {
-			di as error "Cannot specify 'align' without multicolumn"
+			di as error "Option 'align' requires option 'multicolumn'"
 			exit 198
 		}
 	}
@@ -213,20 +212,14 @@ prog statex_row
 		}
 		
 		// Check: same number of impled columns as in table
-		if `blank' loc p1 = "+1" // Move below the loop and change to if `blank' loc n_cols = `n_cols'+1
-		loc n_cols = 0 
+		loc ncols = 0 
 		foreach multicol of local multicolumn {
-			loc n_cols = `n_cols' + `multicol'
+			loc ncols = `ncols' + `multicol'
 		}
-			// Get number of columns of table: 
-		mata: st_local("n_cols_tab", strofreal(pT->ncols))
+		if `blank' loc ncols = `ncols' + 1
 		
-		cap assert `n_cols' `p1' == `n_cols_tab'
-		if _rc {
-			if `blank' loc blank_message = " including one blank column"
-			di as error `"Total Number of columns, i.e. sum of multicolumns (`n_cols'`blank_message'), is not the same as the number of columns in Table `name' (`n_cols_tab')"'
-			exit 198
-		}
+			// Get number of columns of table: 
+		mata: pT->check_ncols(`ncols',  "Wrong number of elements in row.")
 		
 		// Check alignment 
 		loc has_align = `"`align'"'!=""
@@ -392,14 +385,8 @@ prog statex_est
 	
 	// Check that namelist has the appropriate length. 
 	loc nres : list sizeof namelist
-	mata: st_local("ncols", strofreal(pT->ncols))
-	
-	cap assert `nres'==`ncols'-1
-	if _rc {
-		di as error "Number of estimation results provided (`nres') not the same as the number expected (`=`ncols'-1')"
-		di as error "	Expects one less estimation result than the number of columns in table (the first is reserved for variable names)."
-		exit 198
-	}
+	loc ncols = `nres' + 1
+	mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
 	
 	* Write table
 	*************
@@ -441,6 +428,7 @@ prog statex_est
 	
 	if "`stats'"!="nostats" {
 		if "`longmidrule'"!="" statex_midrule, name(`name')
+		mata: st_local("ncols", strofreal(pT->ncols))
 		else mata: pT->append_to_line(`" \cmidrule(lr){2-`ncols'}"', 0, "no")
 		mata: pT->add_line("")
 		statex_est_stats `namelist', name(`name') `statistics'
@@ -459,14 +447,10 @@ prog statex_est_prepare
 	mata: pT = statex.get_table("`name'")
 	mata: st_local("ncols_statex", strofreal(pT->ncols))
 	
-	// Check that the user provided the correct number of results/columns
-	loc n_res : list sizeof namelist
-	cap assert `n_res' + 1 == `ncols_statex' // column for varnames
-	if _rc {
-		di as error "Wrong number of estimation results. Received `n_res', expected `=`ncols_statex'-1'" 
-		di "(The table has `ncols_statex' columns, of which one is used for the varlist)"
-		exit 198
-	}
+	// Check that namelist has the appropriate length. 
+	loc nres : list sizeof namelist
+	loc ncols = `nres' + 1
+	mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
 	
 	// Check that all provided ests exists
 	qui estimates dir
@@ -733,8 +717,11 @@ prog statex_est_header
 	* Syntax
 	********
 	if "`name'"=="" mata: st_local("name", statex.get_current())
-	//mata: pT = statex.get_table("`name'")
-	//mata: st_local("ncols_statex", strofreal(pT->ncols))
+	
+	// Check that namelist has the appropriate length. 
+	loc nres : list sizeof namelist
+	loc ncols = `nres' + 1
+	mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
 	
 	* Loop over estimates, and group identical consequtive y-vars 
 	**************************************************************
@@ -911,8 +898,21 @@ prog statex_est_stats
 	if "`stats'"=="" {
 		loc stats = "N r2"
 		loc format = `"%12.0fc %3.2fc"'
-		loc option_format = 1
 	}
+	
+	if "`format'"!="" 	loc format_provided = 1
+	else 				loc format_provided = 0
+	
+	foreach fmt of local format {
+		// Check format
+		cap loc _ : display `fmt' 1234
+		if _rc {
+			di as error "Invalid format: `fmt'"
+			exit 198
+		}
+	}
+	
+	
 	* Write table
 	*************
 
@@ -939,11 +939,15 @@ prog statex_est_stats
 		
 		
 		// Format stats
-		loc last_format = "`fmt'"
-		gettoken fmt format : format
-		if `"`fmt'"'=="" loc fmt = "`last_format'" // Use last provided 
-		if `"`fmt'"'=="" & "`stat'"=="N"  loc fmt = "%19.0fc"
-		if `"`fmt'"'=="" loc fmt = "%19.3fc"
+		if `format_provided' {
+			loc last_format = "`fmt'"
+			gettoken fmt format : format
+			if `"`fmt'"'=="" loc fmt = "`last_format'" // Use last provided 	
+		}
+		else {
+			if "`stat'"=="N"  loc fmt = "%19.0fc"
+			else loc fmt = "%19.3fc"
+		}
 		
 		foreach est of local estnames {
 			qui estimates restore `est'
@@ -969,6 +973,11 @@ prog statex_mat
 	// Table is open
 	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
+	
+	// Check that namelist has the appropriate length. 
+	* Flag: Need to infer cols of the table using colsof(`b') and call
+	mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
+	
 	mata: st_local("ncols_statex", strofreal(pT->ncols))
 	
 	* Parse options with suboptions into main components and suboptions
@@ -1086,7 +1095,8 @@ prog statex_mat
 		}
 	}
 	
-	// Correct number of implied columns: 
+	// Correct number of implied columns:
+	/*FLAG
 	loc ncols = colsof(`b')
 	if `"`rowlabels'"'!="" loc ++ncols
 	if `"`rowlabels'"'!="" loc ncols_p1 = ", including one for row labes"
@@ -1094,6 +1104,7 @@ prog statex_mat
 		di as error "Wrong number of implied columns. Table has `ncols_stable' columns, received `ncols'`ncols_p1'."
 		exit 198
 	}
+	*/
 	
 	* Write
 	*******
