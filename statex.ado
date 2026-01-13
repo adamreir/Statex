@@ -81,21 +81,6 @@ prog statex_new
 	
 end
 
-prog statex_begin_table
-
-	//if "`ci_level'"=="" loc ci_level = "95"
-	if "`coltypes'"=="" {
-		loc coltypes = "l"
-		forv n = 1/`=`n_cols'-1' {
-			loc coltypes = "`coltypes'c"
-		}
-	}
-	mata: pT->add_line("\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}")
-	mata: pT->add_line("\begin{tabular}{`coltypes'} \hline\midrule")
-
-end
-
-
 prog statex_list
 	syntax, [name(string)]
 	
@@ -153,6 +138,45 @@ prog statex_clear
 	statex_drop _all
 end
 
+prog statex_check_ncols
+	syntax, name(namelist max=1) n_cols(integer) [coltypes(string asis) error(string)]
+	// Placeholder/temp function? Checks that the number of columns is correct, and if ncols not yet set also write the boilerplate opening of the table. 
+	// Consider replacing the mata version as this one writes the boilerplate if ncols is previously not set. But make sure this is done before anything is written to the table. 
+	// The user can choose to provide ncols and coltypes when doing statex new. If else use default lcccc. 
+	
+	* Syntax
+	********
+	
+	cap assert `n_cols'>0
+	if _rc {
+		di as error "Option n_cols must be > 0. Received `n_cols'"
+		exit 198
+	}
+	
+	mata: st_local("name", statex.get_current())
+	mata: pT = statex.get_table("`name'")
+	
+	mata: st_local("statex_ncols", strofreal(pT->ncols))
+	if `statex_ncols'==-1 {
+		if "`coltypes'"=="" {
+			loc coltypes = "l"
+			forv n = 1/`=`n_cols'-1' {
+				loc coltypes = "`coltypes'c"
+			}
+		}
+		mata: pT->add_line("\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}")
+		mata: pT->add_line("\begin{tabular}{`coltypes'} \hline\midrule")
+		mata: pT->ncols=`n_cols'
+	}
+	else {
+		cap assert `statex_ncols'==`n_cols'
+		if _rc {
+			di as error "`error' You are trying to write `n_cols' columns, but previously wrote `statex_ncols' columns."
+			exit 198
+		}
+	}
+	
+end
 
 
 ********************************************************************************
@@ -172,7 +196,6 @@ prog statex_row
 	******
 	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
-	mata: pT->add_line("")
 	
 	* Parse
 	*******
@@ -188,7 +211,8 @@ prog statex_row
 		if `blank' loc ncols = `ncols' + 1
 		
 		// Check that they are the same: 
-		mata: pT->check_ncols(`ncols',  "Wrong number of elements in row.")
+		//mata: pT->check_ncols(`ncols',  "Wrong number of columns.")
+		statex_check_ncols, name("`name'") n_cols(`ncols') error("Wrong number of columns.")
 		
 		// Check: alignment not specified
 		cap assert `"`align'"'=="" //test: statex_new, ncols(3); statex_row, row("a" "b" "c") align(c c c) 
@@ -219,7 +243,9 @@ prog statex_row
 		if `blank' loc ncols = `ncols' + 1
 		
 			// Get number of columns of table: 
-		mata: pT->check_ncols(`ncols',  "Wrong number of elements in row.")
+		//mata: pT->check_ncols(`ncols',  "Wrong number of elements in row.")
+		statex_check_ncols, name("`name'") n_cols(`ncols') error("Wrong number of columns.")
+		
 		
 		// Check alignment 
 		loc has_align = `"`align'"'!=""
@@ -250,6 +276,7 @@ prog statex_row
 	
 	* Write row
 	************
+	mata: pT->add_line("")
 	if !`has_multicolumn' {
 		loc n = 0
 		if `blank' {
@@ -299,7 +326,6 @@ prog statex_row
 		}
 	}
 end
-
 
 prog statex_panel
 	syntax, ///
@@ -386,7 +412,8 @@ prog statex_est
 	// Check that namelist has the appropriate length. 
 	loc nres : list sizeof namelist
 	loc ncols = `nres' + 1
-	mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
+	//mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
+	statex_check_ncols, name("`name'") n_cols(`ncols') error("Wrong number of estimation results.")
 	
 	* Write table
 	*************
@@ -450,7 +477,8 @@ prog statex_est_prepare
 	// Check that namelist has the appropriate length. 
 	loc nres : list sizeof namelist
 	loc ncols = `nres' + 1
-	mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
+	//mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
+	statex_check_ncols, name("`name'") n_cols(`ncols') error("Wrong number of estimation results.")
 	
 	// Check that all provided ests exists
 	qui estimates dir
@@ -721,7 +749,8 @@ prog statex_est_header
 	// Check that namelist has the appropriate length. 
 	loc nres : list sizeof namelist
 	loc ncols = `nres' + 1
-	mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
+	//mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
+	
 	
 	* Loop over estimates, and group identical consequtive y-vars 
 	**************************************************************
@@ -734,7 +763,7 @@ prog statex_est_header
 		qui estimates restore `est'
 		loc y `e(depvar)'
 		
-		// Parse similar
+		// Combine adjecent, identical yvars - infer `multicolumn', "row" etc.
 		if `"`y'"'==`"`prev'"' & "`group'"!="nogroup" {
 			loc ++n_obj
 		}
@@ -976,7 +1005,8 @@ prog statex_mat
 	
 	// Check that namelist has the appropriate length. 
 	* Flag: Need to infer cols of the table using colsof(`b') and call
-	mata: pT->check_ncols(`ncols',  "Wrong number of estimation results.")
+	//mata: pT->check_ncols(`n_cols',  "Wrong number of columns.")
+	statex_check_ncols, name("`name'") n_cols(`n_cols') error("Wrong number of columns.")
 	
 	mata: st_local("ncols_statex", strofreal(pT->ncols))
 	
