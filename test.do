@@ -30,7 +30,7 @@ lab var x1 "X1"
 set tracedepth 2
 
 eststo est1: reg y x1
-eststo est2: reghdfe y x1 x2, absorb(year)
+eststo est2: reghdfe y x1 x2 i.year //, absorb(year)
 
 //set trace on 
 set tracedepth 5
@@ -38,18 +38,25 @@ set tracedepth 5
 statex new, /*n_cols(3)*/ paren("se") //width(50)
 
 
-statex est est1 est2, label /*b(%3.2fc)*/ paren(%3.2fc) statistics(r2 N, format(%3.1fc %19.1fc) label(RR2 OBS)) indicate("Year FE=*year", label(yes no))
+statex est est1 est2, label /*b(%3.2fc)*/ paren(%3.2fc) statistics(r2 N, format(%3.1fc %19.1fc) label(RR2 OBS)) indicate("Year FE=*year", label(yes ""))
+statex est est1 est2, label /*b(%3.2fc)*/ paren(%3.2fc) statistics(r2 N, format(%3.1fc %19.1fc) label(RR2 OBS)) indicate("Year FE=*year", label(yes ""))
 
+/*
 statex row, row(a b c)
 statex close
+*/
 
 statex list
+
+
+statex list_opt
 
 //mata: pT->write_table("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test1.tex")
 
 
 esttab est1 est2 using "${overleaf}/tables/esttab1.tex", replace indicate("Year FE=*.year" "Indiv FE=*.id", label("\checkbox" "")) stats(N M)
 esttab est1 est2 using "${overleaf}/tables/esttab_nogap.tex", replace nogap  indicate("Year FE=*.year" "Indiv FE=*.id", label("\checkbox" "")) stats(N M)
+
 statex_write, filename("${overleaf}/tables/test1.tex") replace
 
 exit198

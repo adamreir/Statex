@@ -1,17 +1,19 @@
 Todo: 
  - Make complete list of symbols to escape in Latex (in particular "%" -> "\%")
- - NO: Add option "new" to est and similar commands (avoid having to do "statex new")
  - Add option to specify alignment. 
  - Add option to specify center alignment via Latex package (siunitx)? 
  - statex est: Make options e.g. onlyheader as a synonym for " notable noindic nostats"
  - Add option "panel" to statex est?
  - Check: statex est now does this between params and stats "[1em] \cmidrule(lr){2-n}". Make sure this is not a bug. 
  - Display error if the user specifies a variable in statex est option "order" or "drop" that does not exist (but maybe not exit With error?)
- - Implement indicate(, label(Yes No)) suboption. 
  - Use indicator variable labels if suboptions label not provided? 
  - Make statex panel add midrule by default (and add option nomidrule)
  - Add suboption to format * footer note (* p< 0.100 or * p< 0.10)
  - Automatic VCE formula detection. 
+ - Tell the user when a New file has been written (and whether or not it existed before)
+ - Add suboption to footer, custom() to adjust text size (\footnotesize by default)
+ - Check that margins work. 
+ - Add option to add variable means to stats?
 
 Long term: 
  - Add "force" option. Think more about this: Should a "force" option be distributed to all subcommands

@@ -29,7 +29,6 @@ class Table {
 	real scalar ci_level
 	real scalar has_preamble
 	
-	
 	void init()
 	void li()
 	void add_line() 

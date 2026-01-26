@@ -153,7 +153,7 @@ prog statex_check_ncols
 		exit 198
 	}
 	
-	mata: st_local("name", statex.get_current())
+	//mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	
 	mata: st_local("statex_ncols", strofreal(pT->ncols))
@@ -178,7 +178,25 @@ prog statex_check_ncols
 	
 end
 
+prog statex_list_opt
+	syntax, [name(namelist max=1)]
+	// For dev. purpose (I think)
+	
+	if "`name'"=="" mata: st_local("name", statex.get_current())
+	mata: pT = statex.get_table("`name'")
+	
+	foreach attr in name stars paren cluster_var {
+		mata: st_local("val", pT->`attr')
+		di `"Attr `attr': "`val'""'
+	}
+	
+	foreach attr in used_stars used_paren used_conventional_se used_robust_se used_clustered_se panel_counter ncols cell_width cell_overflow is_closed ci_level has_preamble {
+		mata: st_local("val", strofreal(pT->`attr'))
+		di `"Attr `attr': `val'"'
+	}
 
+end
+	
 ********************************************************************************
 *********************************** Header / row *******************************
 ********************************************************************************
@@ -1280,7 +1298,7 @@ prog statex_footer
 	if `"`custom'"'!="" {
 		if strpos(`"`custom'"', `"""')==0 loc custom = `""`custom'""'
 		foreach custom_msg of local custom {
-		mata: pT->add_line(`"\multicolumn{`n_cols_tab'}{l}{`custom_msg'}"')	
+		mata: pT->add_line(`"\multicolumn{`n_cols_tab'}{l}{\footnotesize `custom_msg'} \\"')	
 		}
 	}
 end
