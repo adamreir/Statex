@@ -14,6 +14,7 @@ Todo:
  - Add suboption to footer, custom() to adjust text size (\footnotesize by default)
  - Check that margins work. 
  - Add option to add variable means to stats?
+ - Write detected SE's in note. 
 
 Long term: 
  - Add "force" option. Think more about this: Should a "force" option be distributed to all subcommands
