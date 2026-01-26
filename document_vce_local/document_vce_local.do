@@ -253,4 +253,5 @@ foreach vce in "" /// NO option
 get_data1
 
 frame vce: li, sepby(vce_opt)
-frame vce: save "C:\Users\s16501\Documents\GitHub\Statex\document_vce_local\vce_local.dta", replace
+frame vce: save				 	"C:\Users\s16501\Documents\GitHub\Statex\document_vce_local\vce_local.dta", replace
+frame vce: export excel using 	"C:\Users\s16501\Documents\GitHub\Statex\document_vce_local\vce_local.xlsx", replace firstrow(var)

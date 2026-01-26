@@ -17,8 +17,17 @@ class Table {
 	real scalar used_paren
 	real scalar used_conventional_se
 	real scalar used_robust_se
+	real scalar used_hac_robust_se
 	real scalar used_clustered_se
-	string scalar cluster_var
+	real scalar used_bootstrap_se 
+	real scalar used_jackknife_se
+	real scalar used_unknown_se
+	real scalar used_svy_se // survey prefix "svy: "
+	string scalar clustvar
+	//string scalar cluster_var1
+	//string scalar cluster_var2
+	//string scalar cluster_var3
+	
 	
 	// State
 	real scalar panel_counter
@@ -27,7 +36,6 @@ class Table {
 	real scalar cell_overflow
 	real scalar is_closed
 	real scalar ci_level
-	real scalar has_preamble
 	
 	void init()
 	void li()
@@ -49,15 +57,20 @@ void Table::init(string scalar _name, string scalar _stars, string scalar _paren
 	used_paren = 0
 	used_conventional_se = 0
 	used_robust_se = 0
+	used_hac_robust_se = 0
 	used_clustered_se = 0
-	cluster_var = ""
+	used_bootstrap_se = 0
+	used_jackknife_se = 0
+	used_unknown_se = 0
+	used_svy_se = 0
+	clustvar = ""
 	
 	panel_counter = 65
 	ncols = -1 // -1: not set yet. Set whenever first needed
 	cell_width = _cell_width
 	cell_overflow = 0
 	is_closed = 0
-	ci_level = _ci_level
+	ci_level = _ci_level 
 }
 
 void Table::li() {

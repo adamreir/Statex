@@ -185,12 +185,13 @@ prog statex_list_opt
 	if "`name'"=="" mata: st_local("name", statex.get_current())
 	mata: pT = statex.get_table("`name'")
 	
-	foreach attr in name stars paren cluster_var {
+	foreach attr in name stars paren clustvar {
 		mata: st_local("val", pT->`attr')
 		di `"Attr `attr': "`val'""'
 	}
 	
-	foreach attr in used_stars used_paren used_conventional_se used_robust_se used_clustered_se panel_counter ncols cell_width cell_overflow is_closed ci_level has_preamble {
+	foreach attr in used_stars used_paren panel_counter ncols cell_width cell_overflow is_closed ci_level  ///
+	used_conventional_se used_robust_se used_hac_robust_se used_clustered_se used_bootstrap_se used_jackknife_se used_unknown_se used_svy_se {
 		mata: st_local("val", strofreal(pT->`attr'))
 		di `"Attr `attr': `val'"'
 	}
@@ -520,7 +521,7 @@ prog statex_est_prepare
 	}
 
 	mata: st_local("ci_level", strofreal(pT->ci_level))
-	statex_est_extract `namelist', ci_level(`ci_level') estframe(`estframe') indframe(`indframe') `indicate' // Adds estimated params to frame
+	statex_est_extract `namelist', name(`name') ci_level(`ci_level') estframe(`estframe') indframe(`indframe') `indicate' // Adds estimated params to frame
 	
 	if `"`drop'"'!="" {
 		foreach token of local drop {
@@ -565,7 +566,10 @@ prog statex_est_prepare
 end
 
 prog statex_est_extract // Take est and place in (i.e. add to) frame
-	syntax namelist, ci_level(numlist max=1) [indicate(string asis)] estframe(string asis) indframe(string asis) //, est(string) suffix(string)
+	syntax namelist, ci_level(numlist max=1)  [name(namelist max=1) indicate(string asis)] estframe(string asis) indframe(string asis) //, est(string) suffix(string)
+	
+	if "`name'"=="" mata: st_local("name", statex.get_current())
+	mata: pT = statex.get_table("`name'")
 	
 	// Consider changing this to a mata matrix for Stata users with limited number of columns. 
 	// parse indicate option
@@ -609,6 +613,37 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		}
 	}
 	
+	* Detect SE usage
+	foreach est of local namelist {
+		qui estimates restore `est'
+		foreach loc in vce vcetype clustvar prefix {
+			loc `loc' = ""
+		}
+		cap loc vce = lower(e(vce))
+		cap loc	vcetype = lower(e(vcetype))
+		cap local clustvar =  e(clustvar)
+		cap local prefix = lower(e(prefix))
+		
+		
+		if `"`prefix'"'=="svy" mata: pT->used_svy_se = 1
+		else if `"`prefix'"'=="bootstrap" mata: pT->used_bootstrap_se = 1
+		else if `"`prefix'"'=="jackknife" mata: pT->used_jackknife_se = 1
+		else if inlist(`"`vce'"', "", "ols", "unadjusted", "oim", "conventional", "opg", "eim") 	mata: pT->used_conventional_se = 1
+		else if `"`vcetype'"'=="hac" 														mata: pT->used_hac_robust_se = 1
+		else if inlist(`"`vce'"', "cluster", "robust cluster", "robust two-way cluster") | (`"`clustvar'"'!="") {
+			mata: pT->used_clustered_se = 1
+			mata: st_local("current_clustvar", pT->clustvar)
+			if `"`current_clustvar'"'!="" & `"`current_clustvar'"'!=`"`clustvar'"' mata: pT->clustvar = "_inconsistent_"
+			else if `"`clustvar'"'!="" mata: pT->clustvar  = `"`clustvar'"'
+		}
+		else if inlist(`"`vce'"', "hc0", "hc1", "hc2", "hc3", "robust") 					mata: pT->used_robust_se = 1
+		else if inlist(`"`vce'"', "bootstrap") mata: pT->used_bootstrap_se = 1
+		else if inlist(`"`vce'"', "jackknife", "jackknife1") mata: pT->used_jackknife_se = 1
+		else mata: pT->used_unknown_se = 1
+	}
+	
+	
+	* Extract and store parameters and indicators (absorbed or manually specified groups of variables)
 	loc column = 1
 	foreach est of local namelist {
 		
@@ -637,7 +672,7 @@ prog statex_est_extract // Take est and place in (i.e. add to) frame
 		
 		cap mat drop `to'
 		loc n = colsof(b)
-		forv i = 1/`n' {
+		forv i = 1/`n' { // Foreach variable
 			loc varname : word `i' of `varnames'
 			
 			// Check if `varname' is in `indicate'

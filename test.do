@@ -29,7 +29,7 @@ lab var x1 "X1"
 //set trace on
 set tracedepth 2
 
-eststo est1: reg y x1
+eststo est1: reg y x1, vce(cluster id)
 eststo est2: reghdfe y x1 x2 i.year //, absorb(year)
 
 //set trace on 
@@ -40,6 +40,10 @@ statex new, /*n_cols(3)*/ paren("se") //width(50)
 
 statex est est1 est2, label /*b(%3.2fc)*/ paren(%3.2fc) statistics(r2 N, format(%3.1fc %19.1fc) label(RR2 OBS)) indicate("Year FE=*year", label(yes ""))
 statex est est1 est2, label /*b(%3.2fc)*/ paren(%3.2fc) statistics(r2 N, format(%3.1fc %19.1fc) label(RR2 OBS)) indicate("Year FE=*year", label(yes ""))
+
+statex list_opt
+
+statex close, footer(robust
 
 /*
 statex row, row(a b c)
