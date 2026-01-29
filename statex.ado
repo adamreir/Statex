@@ -1372,7 +1372,7 @@ end
 
 
 prog statex_save
-	syntax, [name(namelist max=1) replace] filename(string asis)
+	syntax, [name(namelist max=1) replace] filename(string)
 	
 	* Check that mata object statex exists: 
 	***************************************
@@ -1381,26 +1381,38 @@ prog statex_save
 	* Syntax
 	********
 	
+	// Check path exists
+	mata: st_local("direxists", strofreal(direxists(pathgetparent(`"`filename'"'))))
+	if !`direxists' {
+		mata: st_local("not_a_dir", pathgetparent(`"`filename'"'))
+		di as error "Directory not found"
+		exit 601
+		
+	}
+	
 	// If replace not specified, return error if it exists
+	loc filefound = fileexists(`"`filename'"')
 	if "`replace'"=="" {
-		if fileexists(`filename') {
-			di as error "File already exists"
+		if fileexists(`"`filename'"') {
+			di as error "File already exists - add option 'replace' to overwrite"
 			exit 602
 		}
 	}
 	
 	// If replace exists: delete file if it exists
+	loc replaced = 0
 	if "`replace'"!="" {
-		if fileexists(`filename') {
-			cap erase `filename'
+		if fileexists(`"`filename'"') {
+			cap erase `"`filename'"'
             if _rc {
                 di as error `"Tried to replace, but could not delete `filename'"'
                 exit _rc
             }
+			loc replaced = 1
 		}
 	}
 	
-	cap confirm new file `filename'
+	cap confirm new file `"`filename'"'
 	if _rc {
 		di as error `"Not a valid filename: `filename'"'
 		exit 603
@@ -1414,13 +1426,18 @@ prog statex_save
 	* Write to file
 	****************
 	
-	mata: rc = pT->write_table(`filename')
+	mata: rc = pT->write_table(`"`filename'"')
 	mata: st_local("rc", strofreal(rc))
 	
 	if `rc'==0 {
-		di as error "Stata (Mata) experienced an error when trying to write the table to file"
+		di as error "Stata experienced an error when trying to write the table to file"
 		exit 198
 	}
+	
+	if `replaced' loc replaced = "(replaced)"
+	if !`filefound' di `"(file `filename' not found)"'
+	di `"✓ LaTeX table successfully written to {it:`filename'} `replaced'"'
+	
 end
 
 *********

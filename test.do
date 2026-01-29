@@ -1,6 +1,6 @@
 
 global statex   = "C:/Users/`=c(username)'/Documents/GitHub/Statex"
-global overleaf = "C:/Users/s16501/Dropbox/Apps/Overleaf/statex"
+global overleaf = "C:/Users/`=c(username)'/Dropbox/Apps/Overleaf/statex"
 
 mata: mata clear
 discard
@@ -43,7 +43,9 @@ statex est est1 est2, label /*b(%3.2fc)*/ paren(%3.2fc) statistics(r2 N, format(
 
 statex list_opt
 
-statex close, footer(robust
+statex close, footer(robust)
+
+statex save, filename("${overleaf}/tables/test1.tex") replace
 
 /*
 statex row, row(a b c)
@@ -58,7 +60,8 @@ statex list_opt
 //mata: pT->write_table("C:\Users\s16501\Dropbox\Apps\Overleaf\statex\tables\test1.tex")
 
 
-esttab est1 est2 using "${overleaf}/tables/esttab1.tex", replace indicate("Year FE=*.year" "Indiv FE=*.id", label("\checkbox" "")) stats(N M)
+esttab est1 est2 using "${overleaf}/tables/esttab1.tex", replace 
+/*indicate("Year FE=*.year" "Indiv FE=*id", label("\checkbox" "")) stats(N M)
 esttab est1 est2 using "${overleaf}/tables/esttab_nogap.tex", replace nogap  indicate("Year FE=*.year" "Indiv FE=*.id", label("\checkbox" "")) stats(N M)
 
 statex_write, filename("${overleaf}/tables/test1.tex") replace

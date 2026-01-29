@@ -9,8 +9,6 @@ Todo:
  - Use indicator variable labels if suboptions label not provided? 
  - Make statex panel add midrule by default (and add option nomidrule)
  - Add suboption to format * footer note (* p< 0.100 or * p< 0.10)
- - Automatic VCE formula detection. 
- - Tell the user when a New file has been written (and whether or not it existed before)
  - Add suboption to footer, custom() to adjust text size (\footnotesize by default)
  - Check that margins work. 
  - Add option to add variable means to stats?
