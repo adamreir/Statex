@@ -3,6 +3,7 @@ Statex is a Stata package that streamlines the process of generating clean, publ
 
 Installation: 
 ```
+cap ssc uninstall statex
 net install statex, from("https://raw.githubusercontent.com/adamreir/statex/main")
 ```
 
