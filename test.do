@@ -32,6 +32,9 @@ set tracedepth 2
 eststo est1: reg y x1, vce(cluster id)
 eststo est2: reghdfe y x1 x2 i.year //, absorb(year)
 
+
+esttab est1 est2 using "${overleaf}/tables/esttab1.tex", replace 
+
 //set trace on 
 set tracedepth 5
 

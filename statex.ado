@@ -1247,8 +1247,8 @@ prog statex_mat
 end
 
 // FLAG 
-prog statex_from_data
-	syntax varlist, [mat(namelist max=1) name(namelist max=1)]
+prog statex_data
+	syntax varlist, [mat(namelist max=1) name(namelist max=1) panelvar(varlist max=1)]
 	
 	* Check that mata object statex exists: 
 	***************************************
@@ -1256,8 +1256,18 @@ prog statex_from_data
 	
 	* Syntax
 	********
+	if `=_N'>50 { // Flag: Add 'force' option 
+		di as error "Cannot paste a dataset with more than 50 rows to a table. Use option 'force' if you are sure (not implemented)"
+		exit 198
+	}
+	
 	// Table is open
 	if "`name'"=="" mata: st_local("name", statex.get_current())
+	mata: pT = statex.get_table("`name'")
+	
+	foreach v of local varlist {
+		
+	}
 end
 
 
@@ -1463,13 +1473,13 @@ prog statex_numbers
 	// Manual parsing
 	while `"`numbers'"'!="" {
 		gettoken option numbers : numbers
-		cap assert inlist(`"`option'"', "none", "noblank")
+		cap assert inlist(`"`option'"', "none", "blank")
 		if _rc {
 			di as error `"Statex numbers did not recognize option `opt'"'
 			exit 198
 		}
 		if "`option'"=="none" exit
-		if "`option'"=="noblank" loc blank=0
+		if "`option'"=="blank" loc blank = "blank"
 	}
 	loc blank = "`blank'"!=""
 	
